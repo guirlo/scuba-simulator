@@ -53,7 +53,9 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 
 7. **BCD controller** — 3-state machine (IDLE/INFLATING/PURGING) with mutual exclusion (inflate priority). Accepts button inputs, outputs valve commands.
 
-8. **Placeholder inputs** — Constant blocks for breathing_rate (15), breath_depth (1.0), inflate_btn (0), purge_btn (0) ready for Phase 7 dashboard replacement.
+8. **Root-level Inport blocks** — `breathing_rate`, `breath_depth`, `inflate_btn`, `purge_btn` as model inports, ready for timeseries input via `Simulink.SimulationData.Dataset`.
+
+9. **Model reorganized into subsystems** — Controllers, GasCircuit, Mechanics with named ports (P_amb, V_bcd, V_lungs, breath_effort, inflate_cmd, purge_cmd).
 
 ### Simulation Results (120s run, Phase 6)
 
@@ -119,8 +121,17 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 ### Models
 | File | Purpose |
 |------|---------|
-| `models/scuba_buoyancy_sim.slx` | Top-level integrated model (gas + mechanical + coupling) |
+| `models/scuba_buoyancy_sim.slx` | Top-level model with subsystem hierarchy (see below) |
 | `models/test_breathing.slx` | Breathing circuit test harness |
+
+#### Model Hierarchy (`scuba_buoyancy_sim.slx`)
+```
+root
+├── Inports: breathing_rate, breath_depth, inflate_btn, purge_btn
+├── Controllers/        — BreathingController (Stateflow), BCDController (Stateflow)
+├── GasCircuit/         — Tank, regulators, lungs, BCD, valves, SPS converters, Solver
+└── Mechanics/          — DiverMass, BuoyancyForce, HydroDrag, AmbientPressure, MotionSensor, Scopes
+```
 
 ### Parameters
 | File | Purpose |
@@ -189,7 +200,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 | Valve discontinuities | Working | if/else formulation works with ode23t; may need tanh smoothing if solver struggles in edge cases |
 | Gas mix switching | Deferred | Currently a parameter, not dynamic. Hot-switching needs additional architecture |
 | BCD V_max overflow | Implemented | BCDBladder uses wall stiffness K_wall when V > V_max |
-| Breathing controller fidelity | Phase 6 | Currently using sine wave; Stateflow will add proper inhale/pause/exhale/pause phases |
+| Breathing controller fidelity | Complete | Stateflow 4-state machine replaces sine wave |
 
 ---
 
@@ -221,9 +232,21 @@ None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controll
 1. Open MATLAB project: `openProject('L:\Projects\scuba')` or double-click `blank_project.prj`
 2. Build the library: `run('scripts/build_library.m')` — compiles `.ssc` files into `scuba_lib`
 3. Open the model: `open_system('scuba_buoyancy_sim')`
-4. Run: click Play or `sim('scuba_buoyancy_sim')`
-5. Visualize: `plot_results(out)` after simulation completes
-6. Continue with Phase 6 per the plan above
+4. Run with default inputs: click Play (uses ground/zero for inports)
+5. Run with timeseries inputs:
+   ```matlab
+   t = [0; 1800];
+   ds = Simulink.SimulationData.Dataset;
+   ds = ds.addElement(timeseries(15*ones(2,1), t), 'breathing_rate');
+   ds = ds.addElement(timeseries(ones(2,1), t), 'breath_depth');
+   ds = ds.addElement(timeseries(zeros(2,1), t), 'inflate_btn');
+   ds = ds.addElement(timeseries(zeros(2,1), t), 'purge_btn');
+   simIn = Simulink.SimulationInput('scuba_buoyancy_sim');
+   simIn = simIn.setModelParameter('LoadExternalInput','on','ExternalInput','ds');
+   out = sim(simIn);
+   ```
+6. Visualize: `plot_results(out)` after simulation completes
+7. Continue with Phase 7 per the plan above
 
 ---
 

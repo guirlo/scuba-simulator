@@ -174,8 +174,54 @@ Ran 120s simulation successfully:
 
 Initial commit pushed to `origin/master` at `insidelabs-git.mathworks.com:grouleau/scuba-buoyancy.git`. Contains all Phase 1–5 deliverables (92 files, 2290 insertions).
 
+---
+
+## Phase 6: Controllers (2026-05-27)
+
+### Stateflow Breathing Controller
+
+Replaced the sine wave `breath_effort` source with a 4-state Stateflow chart:
+- States: INHALE → PAUSE_POST_INHALE → EXHALE → PAUSE_POST_EXHALE
+- Waveform: half-sine shape during active phases (peak ±200·breath_depth Pa), zero during pauses
+- Timing: 40% inhale, 10% pause, 35% exhale, 15% pause (per cycle = 60/rate seconds)
+- Inputs: `breathing_rate` (bpm), `breath_depth` (0–1 scalar)
+- Discrete sample time: 0.01s
+
+Measured results at 15 bpm: period=4.04s (target 4.0), duty cycle 39/34/28% (target 40/35/25%).
+
+### BCD Controller
+
+3-state Stateflow chart (IDLE / INFLATING / PURGING):
+- Mutual exclusion: inflate takes priority when both buttons pressed simultaneously
+- Direct pass-through of button state to valve commands (no timing/debounce — can add in Phase 7)
+- Verified: inflate produces flow, purge produces flow, both pressed → only inflate fires
+
+### Model Reorganization
+
+Restructured the flat top-level into subsystem hierarchy:
+```
+scuba_buoyancy_sim (root)
+├── Inports: breathing_rate, breath_depth, inflate_btn, purge_btn
+├── Controllers    — Stateflow charts (breathing + BCD)
+├── GasCircuit     — Tank, regulators, lungs, BCD, valves, SPS converters
+└── Mechanics      — Mass, buoyancy, drag, motion sensor, scopes
+```
+
+Key coupling connections between subsystems:
+- Controllers → GasCircuit: breath_effort, inflate_cmd, purge_cmd (Simulink signals)
+- GasCircuit ↔ Mechanics: P_amb, V_bcd, V_lungs (physical signals)
+
+### Root-Level Inports
+
+Replaced the 4 Constant blocks (BreathingRate, BreathDepth, InflateBtn, PurgeBtn) with root-level Inport blocks. This enables feeding timeseries via `Simulink.SimulationData.Dataset` for scripted dive profiles in Phase 7.
+
+### Simulation Results (Phase 6, 120s)
+
+- Depth: 20.3m → 18.9m (less drift than sine wave due to pause phases)
+- Tank consumed: 0.278 mol (vs 0.36 with sine — pauses reduce active breathing time)
+- Behavior physically correct and stable
+
 ### Next Steps
 
-- Phase 6: Stateflow breathing controller (proper inhale/pause/exhale/pause cycle)
-- Phase 7: Dashboard with interactive controls
+- Phase 7: Dashboard with interactive controls, dive profile scripts
 - Phase 8: Test suite, hard stop re-integration, parameter sweep
