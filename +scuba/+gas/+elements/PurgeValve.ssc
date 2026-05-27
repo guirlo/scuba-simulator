@@ -1,0 +1,36 @@
+component PurgeValve
+% Purge Valve
+% Commanded dump valve for BCD purge.
+% Opens when cmd > 0.5, vents gas from bladder to ambient.
+
+    nodes
+        A = scuba.gas.gas;  % BCD side:left
+        B = scuba.gas.gas;  % Ambient side:right
+    end
+
+    inputs
+        cmd = {0, '1'};  % Purge command (0=closed, 1=open)
+    end
+
+    parameters
+        R_open = {1e4, 'Pa*s/mol'};   % Flow resistance when open (larger vent)
+    end
+
+    variables
+        n_dot = {0, 'mol/s'};  % Flow A to B
+    end
+
+    branches
+        n_dot : A.n_dot -> B.n_dot;
+    end
+
+    equations
+        let
+            p_diff = A.p - B.p;
+            valve_open = if cmd > {0.5, '1'}, {1, '1'} else {0, '1'} end;
+        in
+            n_dot == valve_open * p_diff / R_open;
+        end
+    end
+
+end

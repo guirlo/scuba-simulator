@@ -1,0 +1,41 @@
+component SecondStageRegulator
+% Second Stage Regulator
+% Demand valve: opens when downstream pressure drops below P_amb - P_crack.
+% When open, delivers flow to bring downstream back toward P_amb.
+% Flow is proportional to (P_amb - B.p) to provide self-limiting delivery.
+
+    nodes
+        A = scuba.gas.gas;  % IP inlet:left
+        B = scuba.gas.gas;  % Breathing outlet:right
+    end
+
+    inputs
+        P_amb = {101325, 'Pa'};  % Ambient pressure
+    end
+
+    parameters
+        P_crack = {100, 'Pa'};           % Cracking pressure (work of breathing)
+        R_open  = {6000, 'Pa*s/mol'};    % Flow resistance when open
+    end
+
+    variables
+        n_dot = {0, 'mol/s'};  % Flow A to B
+    end
+
+    branches
+        n_dot : A.n_dot -> B.n_dot;
+    end
+
+    equations
+        let
+            demand = P_amb - B.p;
+        in
+            n_dot == if demand > P_crack
+                (demand - P_crack) / R_open
+            else
+                {0, 'mol/s'}
+            end;
+        end
+    end
+
+end

@@ -1,0 +1,42 @@
+component AmbientPressure
+% Ambient Pressure Sensor
+% Integrates velocity to depth, computes P_amb. Zero-force sensor.
+
+    nodes
+        R = foundation.mechanical.translational.translational;  % :left
+    end
+
+    outputs
+        P_amb = {101325, 'Pa'};  % Ambient pressure at current depth
+    end
+
+    parameters
+        rho_water  = {1025, 'kg/m^3'};   % Water density
+        g          = {9.81, 'm/s^2'};    % Gravitational acceleration
+        P_atm      = {101325, 'Pa'};     % Atmospheric pressure
+        depth_init = {0, 'm'};           % Initial depth
+    end
+
+    variables
+        f = {0, 'N'};  % Force (zero — pure sensor)
+    end
+
+    variables(Access = private)
+        depth = {0, 'm'};  % Depth (state, integrated from velocity)
+    end
+
+    branches
+        f : R.f -> *;
+    end
+
+    function setup
+        depth = depth_init;
+    end
+
+    equations
+        der(depth) == R.v;
+        P_amb == P_atm + rho_water * g * depth;
+        f == {0, 'N'};
+    end
+
+end

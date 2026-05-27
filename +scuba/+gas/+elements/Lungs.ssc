@@ -1,0 +1,57 @@
+component Lungs
+% Lungs
+% Variable-volume lung chamber.
+% Sets port pressure to P_amb + breath_effort.
+% Tracks moles to compute volume.
+% Gas enters from inhale port A (from regulator) and exits via exhale port B.
+
+    nodes
+        A = scuba.gas.gas;  % inhale inlet:left
+        B = scuba.gas.gas;  % exhale outlet:right
+    end
+
+    inputs
+        P_amb         = {101325, 'Pa'};  % Ambient pressure
+        breath_effort = {0, 'Pa'};       % Muscular effort (+exhale, -inhale)
+    end
+
+    outputs
+        V_lungs = {1.5e-3, 'm^3'};  % Current lung volume
+    end
+
+    parameters
+        n_init = {0.0624, 'mol'};    % Initial moles (residual vol at surface)
+    end
+
+    variables
+        n_dot_in  = {0, 'mol/s'};    % Flow into lungs from A
+        n_dot_out = {0, 'mol/s'};    % Flow out of lungs to B
+    end
+
+    variables(Access = private)
+        n_lungs = {0.0624, 'mol'};   % Moles in lungs (state)
+    end
+
+    branches
+        n_dot_in  : A.n_dot -> *;
+        n_dot_out : * -> B.n_dot;
+    end
+
+    function setup
+        n_lungs = n_init;
+    end
+
+    equations
+        let
+            R_gas  = A.R_gas;
+            T      = A.T;
+            P_lung = P_amb + breath_effort;
+        in
+            A.p == P_lung;
+            B.p == P_lung;
+            der(n_lungs) == n_dot_in - n_dot_out;
+            V_lungs == n_lungs * R_gas * T / P_amb;
+        end
+    end
+
+end

@@ -1,0 +1,46 @@
+component BuoyancyForceSource
+% Buoyancy Force Source
+% Net vertical force: Archimedes buoyancy minus weight.
+% Positive depth = downward; net force positive = drives descent.
+
+    nodes
+        R = foundation.mechanical.translational.translational;  % :left
+    end
+
+    inputs
+        P_amb   = {101325, 'Pa'};    % Ambient pressure
+        V_bcd   = {0, 'm^3'};        % BCD volume
+        V_lungs = {1.5e-3, 'm^3'};   % Lung volume
+    end
+
+    parameters
+        rho_water       = {1025, 'kg/m^3'};     % Water density
+        g               = {9.81, 'm/s^2'};      % Gravitational acceleration
+        P_atm           = {101325, 'Pa'};       % Atmospheric pressure
+        m_total         = {89, 'kg'};            % Total mass (diver + belt + gear)
+        V_body          = {0.078, 'm^3'};       % Body volume (incompressible)
+        V_gear          = {0.003, 'm^3'};       % Gear volume (incompressible)
+        V_ws_surface    = {0.0063, 'm^3'};      % Wetsuit gas volume at surface
+        compression_exp = {0.7, '1'};           % Wetsuit compression exponent
+    end
+
+    variables
+        f = {0, 'N'};  % Net vertical force applied to port
+    end
+
+    branches
+        f : R.f -> *;
+    end
+
+    equations
+        let
+            V_wetsuit = V_ws_surface * (P_atm / P_amb)^compression_exp;
+            V_total = V_body + V_gear + V_wetsuit + V_bcd + V_lungs;
+            F_buoy = rho_water * g * V_total;
+            F_weight = m_total * g;
+        in
+            f == F_weight - F_buoy;
+        end
+    end
+
+end

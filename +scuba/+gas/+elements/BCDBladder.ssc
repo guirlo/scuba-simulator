@@ -1,0 +1,59 @@
+component BCDBladder
+% BCD Bladder
+% Flexible variable-volume accumulator.
+% Internal pressure equals ambient (flexible walls).
+% Volume = n*R*T/P_amb, clamped to V_max.
+
+    nodes
+        A = scuba.gas.gas;  % inlet/outlet:left
+    end
+
+    inputs
+        P_amb = {101325, 'Pa'};  % Ambient pressure
+    end
+
+    outputs
+        V_bcd = {0, 'm^3'};  % Current bladder volume
+    end
+
+    parameters
+        V_max  = {0.015, 'm^3'};    % Maximum bladder volume (15 L)
+        n_init = {0, 'mol'};         % Initial moles in BCD
+        K_wall = {1e7, 'Pa/m^3'};   % Wall stiffness when full
+    end
+
+    variables
+        n_dot_in = {0, 'mol/s'};     % Flow into bladder
+    end
+
+    variables(Access = private)
+        n_bcd = {0, 'mol'};  % Moles in bladder (state)
+    end
+
+    branches
+        n_dot_in : A.n_dot -> *;
+    end
+
+    function setup
+        n_bcd = n_init;
+    end
+
+    equations
+        let
+            R_gas = A.R_gas;
+            T     = A.T;
+            V_free = n_bcd * R_gas * T / P_amb;
+            V_actual = if V_free < V_max, V_free else V_max end;
+            P_excess = if V_free > V_max
+                K_wall * (V_free - V_max)
+            else
+                {0, 'Pa'}
+            end;
+        in
+            A.p == P_amb + P_excess;
+            der(n_bcd) == n_dot_in;
+            V_bcd == V_actual;
+        end
+    end
+
+end

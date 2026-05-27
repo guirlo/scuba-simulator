@@ -1,0 +1,41 @@
+component GasVolume
+% Gas Volume
+% Small rigid gas volume providing pressure state for intermediate nodes.
+% P = n*R*T/V (ideal gas in rigid container)
+
+    nodes
+        A = scuba.gas.gas;  % :left
+    end
+
+    parameters
+        V     = {1e-4, 'm^3'};      % Internal volume
+        n_init = {0.445, 'mol'};     % Initial moles
+    end
+
+    variables
+        n_dot_in = {0, 'mol/s'};     % Flow into volume
+    end
+
+    variables(Access = private)
+        n_gas = {0.445, 'mol'};      % Moles in volume (state)
+    end
+
+    branches
+        n_dot_in : A.n_dot -> *;
+    end
+
+    function setup
+        n_gas = n_init;
+    end
+
+    equations
+        let
+            R_gas = A.R_gas;
+            T     = A.T;
+        in
+            A.p == n_gas * R_gas * T / V;
+            der(n_gas) == n_dot_in;
+        end
+    end
+
+end

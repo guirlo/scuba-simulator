@@ -1,0 +1,26 @@
+component AmbientReference
+% Ambient Reference
+% Ambient pressure reference (infinite source/sink).
+% Sets port pressure to P_amb; absorbs or supplies any molar flow.
+
+    nodes
+        A = scuba.gas.gas;  % :left
+    end
+
+    inputs
+        P_amb = {101325, 'Pa'};  % Ambient pressure
+    end
+
+    variables
+        n_dot_in = {0, 'mol/s'};  % Flow into reference (free variable)
+    end
+
+    branches
+        n_dot_in : A.n_dot -> *;
+    end
+
+    equations
+        A.p == P_amb;
+    end
+
+end
