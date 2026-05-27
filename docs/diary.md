@@ -147,6 +147,33 @@ Result at 120s: Diver starts at ~20m, slowly ascends due to BCD expansion feedba
 | IP volume | 100 mL | Provides pressure state, prevents algebraic loop |
 | BCD n_init | 0.298 mol | Approximately neutral at 20m |
 
+### Simulink Model Build (scuba_buoyancy_sim.slx)
+
+Used programmatic model construction (`model_edit` tool) to build the top-level model:
+- **Gas circuit**: GasTank → FirstStageRegulator → GasVolume(IP) → SecondStageRegulator → Lungs → ExhaleValve → AmbientReference. Branch from IP: BCDInflateValve → BCDBladder → PurgeValve → same AmbientReference.
+- **Mechanical circuit**: Translational Mass (89 kg) between two Mechanical Translational References. Connected to AmbientPressure, BuoyancyForceSource, HydrodynamicDrag, and Ideal Translational Motion Sensor.
+- **Coupling**: P_amb physical signal distributes from AmbientPressure to all gas components needing depth-dependent pressure. V_bcd and V_lungs feed back from gas accumulators to BuoyancyForceSource.
+- **Control inputs**: Sine wave breath_effort (200 Pa, 0.25 Hz), constants for inflate/purge commands (both 0).
+
+Key decisions during model build:
+1. **Gravity integrated into BuoyancyForceSource** — eliminated separate Ideal Force Source because PS connection between SPS converter and force source failed. The component now computes `f == F_weight - F_buoy` directly.
+2. **Hard stop removed** — caused singular matrix at t=0 with diver initialized at 20m. Will re-add in Phase 8 with proper initial conditions.
+3. **BCD n_init = 0.298 mol** — calculated analytically for neutral buoyancy at 20m: need V_total = m/ρ = 89/1025 = 0.08683 m³, solve for n_bcd given all other volumes at that depth.
+
+### Model Verification
+
+Ran 120s simulation successfully:
+- Diver starts at 20m, breathes steadily at 15 bpm
+- Slow ascent due to BCD expansion positive feedback (expanding gas → more buoyancy → shallower → gas expands more)
+- Stabilizes around 15–16m (BCD expansion balances wetsuit compression loss)
+- Tank consumes ~0.36 mol (correct order: at 20m, ~3 atm absolute, ~0.003 mol/breath × 30 breaths/min × 2 min)
+- Lung volume oscillates with correct ~500mL tidal swing
+- All physics coupling working: depth ↔ pressure ↔ gas volumes ↔ buoyancy ↔ acceleration ↔ depth
+
+### Git Repository
+
+Initial commit pushed to `origin/master` at `insidelabs-git.mathworks.com:grouleau/scuba-buoyancy.git`. Contains all Phase 1–5 deliverables (92 files, 2290 insertions).
+
 ### Next Steps
 
 - Phase 6: Stateflow breathing controller (proper inhale/pause/exhale/pause cycle)
