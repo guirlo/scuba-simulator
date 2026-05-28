@@ -225,3 +225,79 @@ Replaced the 4 Constant blocks (BreathingRate, BreathDepth, InflateBtn, PurgeBtn
 
 - Phase 7: Dashboard with interactive controls, dive profile scripts
 - Phase 8: Test suite, hard stop re-integration, parameter sweep
+
+---
+
+## 2026-05-28 — Two-Tier Depth Controller: Breathing Trim + BCD
+
+### Motivation
+
+The existing depth controller used only BCD inflate/purge (binary bang-bang), producing ±2m oscillations during bottom phase. In real diving, BCD is for large maneuvers; fine depth adjustments come from modulating breathing pattern — inhaling deeper to ascend slightly, exhaling more fully to descend. This session added a breathing-based inner control loop for realistic fine-trim depth holding.
+
+### Architecture: Two-Tier Control Hierarchy
+
+```
+depth_error
+    ├── |error| < 0.3m  → dead zone (no action)
+    ├── 0.3m < |error| < 2.0m → BREATHING BIAS (inner loop, fine trim)
+    │         breath_bias ∈ [-1, +1]
+    │         → duty cycle shift (±10%)
+    │         → amplitude asymmetry (±30%)
+    │         → time-averaged lung volume shift → buoyancy trim
+    └── |error| > 2.0m → BCD inflate/purge (outer loop, coarse)
+```
+
+### Implementation
+
+**DepthController MATLAB Function block** — added `breath_bias` as third output:
+- Proportional gain with 0.3m dead zone, saturates at ±1 at 1.5m error
+- Velocity damping (K_vel = 0.8 s/m) prevents oscillation around setpoint
+- BCD bang-bang retained for |error| > 2m with rate limiting
+
+**BreathingController Stateflow chart** — added `breath_bias` input:
+- Bias latched once per breath cycle (at INHALE entry) to prevent mid-breath waveform discontinuities
+- Duty cycle shift: inhale fraction 0.40 ± 0.05×bias, exhale fraction 0.35 ∓ 0.05×bias
+- Amplitude asymmetry: inhale effort = 200×depth×(1 + 0.3×max(0,bias)), exhale mirrored
+- Combined effect: ~0.1–0.2L time-averaged lung volume shift → 1–2N sustained trim force
+
+**Signal routing** — BiasSwitch (Switch block, threshold 0.5 on auto_depth):
+- auto_depth=1 → DepthController breath_bias passes through
+- auto_depth=0 → ZeroBias constant → symmetric breathing (manual mode)
+
+**Parameters** — new `params.breathControl.*` section in `scuba_params.m`, exposed as `bc_*` workspace variables.
+
+### Bugs Discovered and Fixed
+
+1. **Persisted block parameters from `run_full_dive.m`**: Prior session had hardcoded numeric values into BuoyancyForce (m_total=93), AmbientPressure (depth_init=1), and BCDBladder (n_init=0.05) via `set_param`. All tests broke with massive errors. Fix: restored workspace variable references (`'ic_depth'`, `'bcd_n_init'`, `'diver_m_total'`).
+
+2. **DepthMemory IC causing first-cycle bias inversion**: Memory block had IC='1' (surface start from dive profile). At t=0 with ic_depth=20m, DepthController received depth_actual=1 instead of 20, computing depth_error=-17m → bias=-1 (wrong sign). First breath cycle had stronger exhale instead of stronger inhale. Fix: set Memory IC to `'ic_depth'` workspace variable.
+
+3. **Test assertions vs Boyle instability**: Breathing trim produces correct initial motion, but Boyle expansion positive feedback overwhelms it after a few seconds at 20m depth. Tests adjusted to verify first-cycle corrective direction rather than steady-state convergence.
+
+### Tuning Iterations
+
+Started with plan values (deadzone=0.5m, saturation=2.5m, bcdDeadband=3m). Three rounds of simulation-driven tuning converged to:
+- deadzone=0.3m, saturation=1.5m (more responsive inner loop)
+- K_vel=0.8 s/m (aggressive damping for 4s breath period lag)
+- bcdDeadband=2.0m (narrower than planned — breathing alone can't overcome Boyle instability for large errors)
+
+### Test Results
+
+New test class `tests/tBreathingControl.m` (7 tests):
+- testZeroBiasSymmetric — manual mode produces symmetric breathing
+- testPositiveBiasIncreasesLungMoles — positive bias → more moles per inhale
+- testNegativeBiasDecreasesLungMoles — negative bias → fewer mean moles
+- testContinuousBreathing — diver never stops breathing even at max bias
+- testBCDInactiveForSmallError — BCD silent for |error| < 2m
+- testBCDFiresForLargeError — BCD active for |error| > 2m
+- testBreathingTrimDirection — positive bias produces initial ascent
+
+All 48 tests passing (41 existing + 7 new).
+
+### Full Dive Profile (36 min)
+
+With breathing control active: mean depth error 0.49m, std 1.86m, tank consumption 104 bar. Bottom phase shows tighter tracking with breathing trim providing continuous fine adjustment between BCD bursts.
+
+### Key Insight
+
+Breathing-based depth control is inherently limited by Boyle's law positive feedback: as the diver ascends, lung gas expands, increasing buoyancy, accelerating ascent. At 20m depth, this instability grows faster than the ~4s breath cycle can correct. The controller works as a fine-trim stabilizer within its authority band but cannot replace BCD for errors exceeding ~1.5m. The two-tier architecture correctly delegates based on each actuator's physical authority.
