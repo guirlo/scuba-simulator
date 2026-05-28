@@ -3,7 +3,7 @@ component(Propagation = source) GasDomainProperties
 % Sets domain-wide parameters (R_gas, T) for the connected gas network.
 
     nodes
-        A = scuba.gas.gas;  % :left
+        A = scuba.gas.gas(R_gas = R_gas, T = T);  % :left
     end
 
     parameters
@@ -17,11 +17,6 @@ component(Propagation = source) GasDomainProperties
 
     branches
         n_dot_thru : A.n_dot -> *;
-    end
-
-    function setup
-        A.R_gas = R_gas;
-        A.T = T;
     end
 
     equations

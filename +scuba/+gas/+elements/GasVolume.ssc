@@ -17,15 +17,11 @@ component GasVolume
     end
 
     variables(Access = private)
-        n_gas = {0.445, 'mol'};      % Moles in volume (state)
+        n_gas = {value = n_init, priority = priority.high};  % Moles in volume (state)
     end
 
     branches
         n_dot_in : A.n_dot -> *;
-    end
-
-    function setup
-        n_gas = n_init;
     end
 
     equations

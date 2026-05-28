@@ -29,16 +29,12 @@ component Lungs
     end
 
     variables(Access = private)
-        n_lungs = {0.0624, 'mol'};   % Moles in lungs (state)
+        n_lungs = {value = n_init, priority = priority.high};  % Moles in lungs (state)
     end
 
     branches
         n_dot_in  : A.n_dot -> *;
         n_dot_out : * -> B.n_dot;
-    end
-
-    function setup
-        n_lungs = n_init;
     end
 
     equations

@@ -27,15 +27,11 @@ component BCDBladder
     end
 
     variables(Access = private)
-        n_bcd = {0, 'mol'};  % Moles in bladder (state)
+        n_bcd = {value = n_init, priority = priority.high};  % Moles in bladder (state)
     end
 
     branches
         n_dot_in : A.n_dot -> *;
-    end
-
-    function setup
-        n_bcd = n_init;
     end
 
     equations

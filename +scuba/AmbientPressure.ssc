@@ -22,15 +22,11 @@ component AmbientPressure
     end
 
     variables(Access = private)
-        depth = {0, 'm'};  % Depth (state, integrated from velocity)
+        depth = {value = depth_init, priority = priority.high};  % Depth (state, integrated from velocity)
     end
 
     branches
         f : R.f -> *;
-    end
-
-    function setup
-        depth = depth_init;
     end
 
     equations
