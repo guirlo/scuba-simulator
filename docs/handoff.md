@@ -4,7 +4,7 @@
 **Project:** scuba-buoyancy  
 **Location:** `L:\Projects\scuba`  
 **MATLAB version:** R2026a  
-**Status:** Phases 1–6 complete. Test suite (Phase 8) implemented and all 41 tests passing. Dashboard (Phase 7) and remaining polish remain.
+**Status:** Phases 1–6 complete. Test suite (Phase 8) implemented and all 41 tests passing. Custom SVG block icons added. Plant parameterization externalized to workspace variables. Dashboard (Phase 7) and remaining polish remain.
 
 ---
 
@@ -61,6 +61,10 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 
 12. **Test suite complete and passing** — 41 tests across 8 test classes, all passing. Covers flow conservation, ideal gas law, regulator behavior, breathing mechanics, BCD operation, buoyancy maneuvers, dive profiles, and analytical physics validation.
 
+13. **Custom SVG mask icons** — All 14 Simscape components have custom SVG icons (schematic-style line art) via `annotations` blocks referencing SVG files in `images/` directories. Icons are embedded in `scuba_lib.slx` on rebuild.
+
+14. **Externalized plant parameters** — All hardcoded numerical values removed from Simscape block dialogs. Block parameters reference workspace variables (e.g., `tank_V`, `reg1_IP_offset`, `env_rho_water`) populated by `load_plant_params()` from the master `scuba_params()` struct. Single source of truth for all plant tuning.
+
 ### Simulation Results (120s run, Phase 6)
 
 - Diver starts at 20m, drifts to ~18.9m (less drift than sine wave due to pause phases)
@@ -114,6 +118,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 | `+scuba/+gas/+elements/BCDBladder.ssc` | Flexible accumulator (P=P_amb, V_max clamped) |
 | `+scuba/+gas/+elements/PurgeValve.ssc` | Commanded dump valve |
 | `+scuba/+gas/+elements/AmbientReference.ssc` | Infinite source/sink at P_amb; injects p_amb into domain |
+| `+scuba/+gas/+elements/images/*.svg` | Custom SVG mask icons for all gas elements (11 files) |
 
 ### Mechanical Coupling (`+scuba/`)
 | File | Purpose |
@@ -121,6 +126,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 | `+scuba/AmbientPressure.ssc` | Integrates velocity -> depth, outputs P_amb (zero-force sensor) |
 | `+scuba/BuoyancyForceSource.ssc` | Archimedes buoyancy + weight + wetsuit compression |
 | `+scuba/HydrodynamicDrag.ssc` | Quadratic drag: 0.5*rho*Cd*A*v*|v| |
+| `+scuba/images/*.svg` | Custom SVG mask icons for mechanical components (3 files) |
 
 ### Models
 | File | Purpose |
@@ -140,7 +146,7 @@ root
 ### Parameters
 | File | Purpose |
 |------|---------|
-| `parameters/scuba_params.m` | Master configuration (water, tank, diver, wetsuit, BCD, breathing) |
+| `parameters/scuba_params.m` | Master configuration (water, tank, regulators, valves, diver, wetsuit, BCD, ICs, constants, derived) |
 | `parameters/gas_properties.m` | Gas mix lookup (Air, Nitrox 32%) |
 | `parameters/diver_configs.m` | Preset configurations (beginner, experienced, nitrox) |
 
@@ -150,6 +156,7 @@ root
 | `scripts/run_simulation.m` | Programmatic sim runner |
 | `scripts/build_library.m` | Runs `sscbuild('scuba')` |
 | `scripts/plot_results.m` | 6-panel post-simulation visualization |
+| `scripts/load_plant_params.m` | Flattens `params` struct into workspace variables for Simscape block dialogs |
 
 ### Tests
 | File | Purpose |
@@ -187,6 +194,8 @@ root
 7. **Weight integrated into BuoyancyForceSource** — Eliminates separate gravity block and PS connection issues
 8. **Modern Simscape constructs** — No deprecated `function setup`; uses variable priority for initialization and inline node params for propagation
 9. **P_amb as domain across variable** — Ambient pressure propagates through gas connections (set by AmbientReference, read via `A.p_amb` by all components). Eliminates individual PS wires to each block
+10. **Externalized plant parameters** — All Simscape block values reference workspace variables (not hardcoded numbers). `scuba_params()` is the single source of truth; `load_plant_params()` flattens into named variables (e.g., `tank_V`, `reg1_IP_offset`). Block dialogs use these names directly.
+11. **Custom SVG mask icons via annotations** — Each `.ssc` component declares `annotations; Icon = 'images/Name.svg'; end`. SVGs are embedded into `scuba_lib.slx` during `sscbuild`.
 
 ### Numerical Solutions Discovered
 
@@ -249,10 +258,11 @@ None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controll
 
 ## How to Continue
 
-1. Open MATLAB project: `openProject('L:\Projects\scuba')` or double-click `blank_project.prj`
-2. Build the library: `run('scripts/build_library.m')` — compiles `.ssc` files into `scuba_lib`
+1. Open MATLAB project: `openProject('L:\Projects\scuba')` or double-click `blank_project.prj` — `startup.m` auto-loads `params`, `gas`, and all plant variables into workspace
+2. Build the library: `run('scripts/build_library.m')` — compiles `.ssc` files (with SVG icons) into `scuba_lib`
 3. Open the model: `open_system('scuba_buoyancy_sim')`
 4. Run with default inputs: click Play (uses ground/zero for inports)
+   - If you get "undefined variable" errors, run `startup` to reload workspace variables
 5. Run with timeseries inputs:
    ```matlab
    t = [0; 1800];
@@ -273,17 +283,28 @@ None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controll
 
 ## Key Physics Parameters (Quick Reference)
 
-| Parameter | Value | Note |
-|-----------|-------|------|
-| rho_water | 1025 kg/m^3 | Saltwater |
-| P_atm | 101,325 Pa | 1 atm |
-| Tank | 12 L, 200 bar | 98.47 mol initial |
-| IP offset | 10 bar above ambient | 1st stage set point |
-| 2nd stage P_crack | 100 Pa | Work of breathing |
-| 2nd stage R_open | 6000 Pa*s/mol | Regulator-limited delivery |
-| Breathing rate | 15 bpm (0.25 Hz) | Relaxed diver |
-| BCD max | 15 L | Bladder capacity |
-| Wetsuit V_surface | 6.3 L | Gas volume at surface |
-| Diver total mass | 89 kg | Body + belt + gear |
-| Body volume | 78 L | Incompressible |
-| Gear volume | 3 L | Incompressible |
+All values defined in `parameters/scuba_params.m`, loaded into workspace by `load_plant_params()`.
+
+| Workspace Variable | Value | Source in `params` |
+|--------------------|-------|-------------------|
+| `env_rho_water` | 1025 kg/m^3 | `params.water.rho` |
+| `env_P_atm` | 101,325 Pa | `params.const.Patm` |
+| `tank_V` | 0.012 m^3 (12 L) | `params.tank.internalVolume` |
+| `tank_n_init` | 98.47 mol | `params.tank.startMoles` (derived) |
+| `reg1_IP_offset` | 10e5 Pa (10 bar) | `params.firstStage.IP_offset` |
+| `reg1_R_open` | 1e3 Pa*s/mol | `params.firstStage.R_open` |
+| `reg2_P_crack` | 100 Pa | `params.secondStage.P_crack` |
+| `reg2_R_open` | 6000 Pa*s/mol | `params.secondStage.R_open` |
+| `exhale_P_crack` | 50 Pa | `params.exhaleValve.P_crack` |
+| `exhale_R_open` | 9000 Pa*s/mol | `params.exhaleValve.R_open` |
+| `bcdinfl_R_open` | 2e4 Pa*s/mol | `params.bcdInflateValve.R_open` |
+| `bcd_V_max` | 0.015 m^3 (15 L) | `params.bcd.maxVolume` |
+| `purge_R_open` | 1e4 Pa*s/mol | `params.purgeValve.R_open` |
+| `diver_m_total` | 89 kg | `params.diver.totalMass` (derived) |
+| `diver_V_body` | 0.078 m^3 | `params.diver.bodyVolume` |
+| `gear_V` | 0.003 m^3 | `params.gear.volume` |
+| `ws_V_surface` | 0.0063 m^3 | `params.wetsuit.surfaceVolume` (derived) |
+| `ws_comp_exp` | 0.7 | `params.wetsuit.compressionExponent` |
+| `drag_Cd` | 1.1 | `params.diver.dragCoeff` |
+| `drag_A_frontal` | 0.12 m^2 | `params.diver.frontalArea` |
+| `ic_depth` | 20 m | `params.ic.depth` |

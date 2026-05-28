@@ -5,6 +5,10 @@ component Lungs
 % Tracks moles to compute volume.
 % Gas enters from inhale port A (from regulator) and exits via exhale port B.
 
+    annotations
+        Icon = 'images/Lungs.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % inhale inlet:left
         B = scuba.gas.gas;  % exhale outlet:right

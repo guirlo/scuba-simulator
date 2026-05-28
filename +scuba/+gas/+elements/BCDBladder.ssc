@@ -4,6 +4,10 @@ component BCDBladder
 % Internal pressure equals ambient (flexible walls).
 % Volume = n*R*T/P_amb, clamped to V_max.
 
+    annotations
+        Icon = 'images/BCDBladder.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % inlet/outlet:left
     end

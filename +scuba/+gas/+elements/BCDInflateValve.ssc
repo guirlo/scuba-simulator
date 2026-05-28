@@ -3,6 +3,10 @@ component BCDInflateValve
 % Commanded valve for BCD inflation.
 % Opens when cmd > 0.5, allowing IP gas to flow into bladder.
 
+    annotations
+        Icon = 'images/BCDInflateValve.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % IP side:left
         B = scuba.gas.gas;  % BCD side:right

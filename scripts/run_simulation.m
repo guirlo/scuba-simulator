@@ -21,6 +21,7 @@ gas = gas_properties(params.tank.gasMix);
 % Assign to base workspace for Simulink
 assignin('base', 'params', params);
 assignin('base', 'gas', gas);
+load_plant_params();
 
 % Run simulation
 simIn = Simulink.SimulationInput('scuba_buoyancy_sim');

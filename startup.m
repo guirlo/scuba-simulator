@@ -3,6 +3,7 @@
 
 params = scuba_params();
 gas = gas_properties(params.tank.gasMix);
+load_plant_params();
 
 fprintf('Scuba Buoyancy Simulation loaded.\n');
 fprintf('  Water: %s (%.0f kg/m^3)\n', params.water.type, params.water.rho);

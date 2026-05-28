@@ -4,6 +4,10 @@ component SecondStageRegulator
 % When open, delivers flow to bring downstream back toward P_amb.
 % Flow is proportional to (P_amb - B.p) to provide self-limiting delivery.
 
+    annotations
+        Icon = 'images/SecondStageRegulator.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % IP inlet:left
         B = scuba.gas.gas;  % Breathing outlet:right

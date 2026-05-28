@@ -3,6 +3,10 @@ component FirstStageRegulator
 % Reduces HP tank pressure to intermediate pressure.
 % Maintains outlet (B) at P_amb + IP_offset, limited by supply pressure.
 
+    annotations
+        Icon = 'images/FirstStageRegulator.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % HP inlet:left
         B = scuba.gas.gas;  % IP outlet:right

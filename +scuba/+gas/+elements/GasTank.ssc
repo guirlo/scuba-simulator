@@ -3,6 +3,10 @@ component GasTank
 % High-pressure gas reservoir (rigid tank).
 % Pressure follows ideal gas law: P = n*R*T/V
 
+    annotations
+        Icon = 'images/GasTank.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % outlet:right
     end

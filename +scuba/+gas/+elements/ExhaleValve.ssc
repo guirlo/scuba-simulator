@@ -3,6 +3,10 @@ component ExhaleValve
 % One-way check valve for exhaled gas.
 % Opens when upstream pressure exceeds downstream by P_crack.
 
+    annotations
+        Icon = 'images/ExhaleValve.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % lung side:left
         B = scuba.gas.gas;  % ambient side:right

@@ -2,6 +2,10 @@ component HydrodynamicDrag
 % Hydrodynamic Drag
 % Quadratic drag opposing motion: F = 0.5*rho*Cd*A*v*|v|
 
+    annotations
+        Icon = 'images/HydrodynamicDrag.svg';
+    end
+
     nodes
         R = foundation.mechanical.translational.translational;  % :left
     end

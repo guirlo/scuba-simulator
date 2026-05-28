@@ -49,6 +49,7 @@ classdef ScubaTestHelper
             gas = gas_properties(params.tank.gasMix);
             assignin('base', 'params', params);
             assignin('base', 'gas', gas);
+            load_plant_params();
         end
 
         function enableLogging(blockPath, varNames)

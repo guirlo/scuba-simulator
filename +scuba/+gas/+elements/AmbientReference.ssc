@@ -3,6 +3,10 @@ component AmbientReference
 % Ambient pressure reference (infinite source/sink).
 % Sets port pressure to P_amb; absorbs or supplies any molar flow.
 
+    annotations
+        Icon = 'images/AmbientReference.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % :left
     end

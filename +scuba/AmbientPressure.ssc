@@ -2,6 +2,10 @@ component AmbientPressure
 % Ambient Pressure Sensor
 % Integrates velocity to depth, computes P_amb. Zero-force sensor.
 
+    annotations
+        Icon = 'images/AmbientPressure.svg';
+    end
+
     nodes
         R = foundation.mechanical.translational.translational;  % :left
     end

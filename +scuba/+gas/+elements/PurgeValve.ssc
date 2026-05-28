@@ -3,6 +3,10 @@ component PurgeValve
 % Commanded dump valve for BCD purge.
 % Opens when cmd > 0.5, vents gas from bladder to ambient.
 
+    annotations
+        Icon = 'images/PurgeValve.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % BCD side:left
         B = scuba.gas.gas;  % Ambient side:right

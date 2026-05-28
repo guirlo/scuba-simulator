@@ -3,6 +3,10 @@ component GasVolume
 % Small rigid gas volume providing pressure state for intermediate nodes.
 % P = n*R*T/V (ideal gas in rigid container)
 
+    annotations
+        Icon = 'images/GasVolume.svg';
+    end
+
     nodes
         A = scuba.gas.gas;  % :left
     end

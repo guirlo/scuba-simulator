@@ -2,6 +2,10 @@ component(Propagation = source) GasDomainProperties
 % Gas Domain Properties
 % Sets domain-wide parameters (R_gas, T) for the connected gas network.
 
+    annotations
+        Icon = 'images/GasDomainProperties.svg';
+    end
+
     nodes
         A = scuba.gas.gas(R_gas = R_gas, T = T);  % :left
     end

@@ -3,6 +3,10 @@ component BuoyancyForceSource
 % Net vertical force: Archimedes buoyancy minus weight.
 % Positive depth = downward; net force positive = drives descent.
 
+    annotations
+        Icon = 'images/BuoyancyForceSource.svg';
+    end
+
     nodes
         R = foundation.mechanical.translational.translational;  % :left
     end
