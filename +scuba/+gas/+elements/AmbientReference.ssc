@@ -21,6 +21,7 @@ component AmbientReference
 
     equations
         A.p == P_amb;
+        A.p_amb == P_amb;
     end
 
 end

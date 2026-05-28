@@ -14,9 +14,9 @@ classdef tRegulatorSetPoint < matlab.unittest.TestCase
     methods (TestMethodSetup)
         function enableLogs(testCase)
             ScubaTestHelper.enableLogging(ScubaTestHelper.FirstStage, ...
-                ["A.p", "B.p", "P_amb", "n_dot"]);
+                ["A.p", "B.p", "A.p_amb", "n_dot"]);
             ScubaTestHelper.enableLogging(ScubaTestHelper.SecondStage, ...
-                ["A.p", "B.p", "P_amb", "n_dot"]);
+                ["A.p", "B.p", "A.p_amb", "n_dot"]);
             ScubaTestHelper.enableLogging(ScubaTestHelper.AmbPress, ...
                 ["depth", "P_amb"]);
             testCase.LoggedBlocks = {
@@ -43,7 +43,7 @@ classdef tRegulatorSetPoint < matlab.unittest.TestCase
             out = ScubaTestHelper.runSim(simIn);
 
             P_IP = ScubaTestHelper.getSignal(out.logsout, 'B.p', 'FirstStageReg');
-            P_amb = ScubaTestHelper.getSignal(out.logsout, 'P_amb', 'FirstStageReg');
+            P_amb = ScubaTestHelper.getSignal(out.logsout, 'A.p_amb', 'FirstStageReg');
 
             % Check at steady state (after 5s)
             mask = P_IP.Time > 5;

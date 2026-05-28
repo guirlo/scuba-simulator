@@ -11,7 +11,6 @@ component Lungs
     end
 
     inputs
-        P_amb         = {101325, 'Pa'};  % Ambient pressure
         breath_effort = {0, 'Pa'};       % Muscular effort (+exhale, -inhale)
     end
 
@@ -38,15 +37,16 @@ component Lungs
     end
 
     equations
+        A.p_amb == B.p_amb;
         let
             R_gas  = A.R_gas;
             T      = A.T;
-            P_lung = P_amb + breath_effort;
+            P_lung = A.p_amb + breath_effort;
         in
             A.p == P_lung;
             B.p == P_lung;
             der(n_lungs) == n_dot_in - n_dot_out;
-            V_lungs == n_lungs * R_gas * T / P_amb;
+            V_lungs == n_lungs * R_gas * T / A.p_amb;
         end
     end
 

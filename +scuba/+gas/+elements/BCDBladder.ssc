@@ -8,9 +8,6 @@ component BCDBladder
         A = scuba.gas.gas;  % inlet/outlet:left
     end
 
-    inputs
-        P_amb = {101325, 'Pa'};  % Ambient pressure
-    end
 
     outputs
         V_bcd = {0, 'm^3'};  % Current bladder volume
@@ -38,7 +35,7 @@ component BCDBladder
         let
             R_gas = A.R_gas;
             T     = A.T;
-            V_free = n_bcd * R_gas * T / P_amb;
+            V_free = n_bcd * R_gas * T / A.p_amb;
             V_actual = if V_free < V_max, V_free else V_max end;
             P_excess = if V_free > V_max
                 K_wall * (V_free - V_max)
@@ -46,7 +43,7 @@ component BCDBladder
                 {0, 'Pa'}
             end;
         in
-            A.p == P_amb + P_excess;
+            A.p == A.p_amb + P_excess;
             der(n_bcd) == n_dot_in;
             V_bcd == V_actual;
         end

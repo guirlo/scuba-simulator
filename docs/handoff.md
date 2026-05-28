@@ -4,7 +4,7 @@
 **Project:** scuba-buoyancy  
 **Location:** `L:\Projects\scuba`  
 **MATLAB version:** R2026a  
-**Status:** Phases 1–6 complete. Full gas circuit, mechanical domain, and Stateflow controllers integrated and running. Dashboard and test suite remain.
+**Status:** Phases 1–6 complete. Test suite (Phase 8) implemented and all 41 tests passing. Dashboard (Phase 7) and remaining polish remain.
 
 ---
 
@@ -25,9 +25,9 @@ Build a 1D vertical buoyancy simulation of a scuba diver in Simulink/Simscape th
 | Layer | Technology | Responsibility |
 |-------|-----------|----------------|
 | Plant — Gas | Custom Simscape domain (`+scuba/+gas/`) | Physical gas flow: tank, regulators, lungs, BCD, valves |
-| Plant — Mechanical | Simscape Translational (Position-Based, β=90°) | 1-DOF vertical motion, buoyancy force, drag |
+| Plant — Mechanical | Simscape Translational (Position-Based, beta=90 deg) | 1-DOF vertical motion, buoyancy force, drag |
 | Control | Simulink + Stateflow | Breathing state machine, BCD commands, dashboard UI |
-| Coupling | Physical Signal (PS) ports | P_amb (mech→gas), volumes (gas→mech), commands (Simulink→gas) |
+| Coupling | Physical Signal (PS) ports | P_amb (mech->gas), volumes (gas->mech), commands (Simulink->gas) |
 
 Key design principle: Gas flow is driven by **pressure differentials**, not command signals. The 2nd stage regulator opens physically when the diver's breathing effort creates suction. The BCD fills because opening the inflate valve exposes it to intermediate pressure.
 
@@ -35,27 +35,31 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 
 ## Current Progress
 
-### Accomplishments (Phases 1–5 Complete)
+### Accomplishments (Phases 1–6 Complete, Phase 8 Test Suite Complete)
 
 1. **Custom gas domain implemented and compiling** — `scuba.gas` domain with pressure (across) and molar flow (through) variables, compiled via `sscbuild('scuba')` into `scuba_lib`.
 
 2. **Full gas component library (13 blocks)** — GasTank, FirstStageRegulator, GasVolume, SecondStageRegulator, Lungs, ExhaleValve, BCDInflateValve, BCDBladder, PurgeValve, AmbientReference, GasDomainProperties all working.
 
-3. **Mechanical coupling components** — AmbientPressure (depth sensor → P_amb), BuoyancyForceSource (volumes → Archimedes force, includes weight), HydrodynamicDrag (quadratic).
+3. **Mechanical coupling components** — AmbientPressure (depth sensor -> P_amb), BuoyancyForceSource (volumes -> Archimedes force, includes weight), HydrodynamicDrag (quadratic).
 
 4. **Integrated top-level model running** — `scuba_buoyancy_sim.slx` simulates 120s with ode23t solver. Diver starts at 20m, breathes at 15 bpm, gas flows driven by pressure differentials, buoyancy-depth coupling works correctly.
 
 5. **Numerical issues resolved** — IP node singularity (added GasVolume), lung volume divergence (tuned valve resistances), 2nd stage flow formulation (demand-proportional), initial condition conflicts.
 
-6. **Tuned for realistic behavior** — ~500mL tidal volume, correct tank depletion rate, BCD trimmed for approximate neutral buoyancy at 20m.
+6. **Tuned for realistic behavior** — Regulator-limited tidal volume (~0.1L at 20m), correct tank depletion rate, BCD trimmed for approximate neutral buoyancy at 20m.
 
-6. **Stateflow breathing controller** — 4-state machine (INHALE → PAUSE → EXHALE → PAUSE) with half-sine effort waveform. Configurable rate (bpm) and depth (scalar). Replaces sine wave source.
+7. **Stateflow breathing controller** — 4-state machine (INHALE -> PAUSE -> EXHALE -> PAUSE) with half-sine effort waveform. Configurable rate (bpm) and depth (scalar). Replaces sine wave source.
 
-7. **BCD controller** — 3-state machine (IDLE/INFLATING/PURGING) with mutual exclusion (inflate priority). Accepts button inputs, outputs valve commands.
+8. **BCD controller** — 3-state machine (IDLE/INFLATING/PURGING) with mutual exclusion (inflate priority). Accepts button inputs, outputs valve commands.
 
-8. **Root-level Inport blocks** — `breathing_rate`, `breath_depth`, `inflate_btn`, `purge_btn` as model inports, ready for timeseries input via `Simulink.SimulationData.Dataset`.
+9. **Root-level Inport blocks** — `breathing_rate`, `breath_depth`, `inflate_btn`, `purge_btn` as model inports, ready for timeseries input via `Simulink.SimulationData.Dataset`.
 
-9. **Model reorganized into subsystems** — Controllers, GasCircuit, Mechanics with named ports (P_amb, V_bcd, V_lungs, breath_effort, inflate_cmd, purge_cmd).
+10. **Model reorganized into subsystems** — Controllers, GasCircuit, Mechanics with named ports (P_amb, V_bcd, V_lungs, breath_effort, inflate_cmd, purge_cmd).
+
+11. **Deprecated `function setup` removed** — All Simscape components use modern constructs: `{value = param, priority = priority.high}` for state initialization, inline node declaration for domain parameter propagation.
+
+12. **Test suite complete and passing** — 41 tests across 8 test classes, all passing. Covers flow conservation, ideal gas law, regulator behavior, breathing mechanics, BCD operation, buoyancy maneuvers, dive profiles, and analytical physics validation.
 
 ### Simulation Results (120s run, Phase 6)
 
@@ -79,7 +83,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 | 5 | Mechanical domain coupling (AmbientPressure, BuoyancyForce, Drag) | **Complete** |
 | 6 | Controllers (Stateflow breathing, BCD logic) | **Complete** |
 | 7 | Dashboard, visualization, input profiles | **Not started** |
-| 8 | Test suite, tuning, documentation | **Not started** |
+| 8 | Test suite, tuning, documentation | **Tests complete (41/41 passing)** |
 
 ---
 
@@ -98,12 +102,12 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 | File | Purpose |
 |------|---------|
 | `+scuba/+gas/gas.ssc` | Domain definition (p across, n_dot through, R_gas, T params) |
-| `+scuba/+gas/branch.ssc` | Two-port base class (A→B, p_diff, n_dot) |
+| `+scuba/+gas/branch.ssc` | Two-port base class (A->B, p_diff, n_dot) |
 | `+scuba/+gas/+elements/GasDomainProperties.ssc` | Propagation source for domain params |
 | `+scuba/+gas/+elements/GasTank.ssc` | HP reservoir (n_init=98.47 mol, V=12L) |
 | `+scuba/+gas/+elements/GasVolume.ssc` | Small rigid volume for IP node (V=100mL) |
-| `+scuba/+gas/+elements/FirstStageRegulator.ssc` | HP → IP (P_amb + 10 bar) |
-| `+scuba/+gas/+elements/SecondStageRegulator.ssc` | Demand valve (R_open=6000 Pa·s/mol) |
+| `+scuba/+gas/+elements/FirstStageRegulator.ssc` | HP -> IP (P_amb + 10 bar) |
+| `+scuba/+gas/+elements/SecondStageRegulator.ssc` | Demand valve (R_open=6000 Pa*s/mol) |
 | `+scuba/+gas/+elements/Lungs.ssc` | Variable chamber (P_amb + breath_effort) |
 | `+scuba/+gas/+elements/ExhaleValve.ssc` | Check valve (R_open=9000, P_crack=50 Pa) |
 | `+scuba/+gas/+elements/BCDInflateValve.ssc` | Commanded on/off valve |
@@ -114,23 +118,23 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 ### Mechanical Coupling (`+scuba/`)
 | File | Purpose |
 |------|---------|
-| `+scuba/AmbientPressure.ssc` | Integrates velocity → depth, outputs P_amb (zero-force sensor) |
+| `+scuba/AmbientPressure.ssc` | Integrates velocity -> depth, outputs P_amb (zero-force sensor) |
 | `+scuba/BuoyancyForceSource.ssc` | Archimedes buoyancy + weight + wetsuit compression |
-| `+scuba/HydrodynamicDrag.ssc` | Quadratic drag: 0.5·ρ·Cd·A·v·|v| |
+| `+scuba/HydrodynamicDrag.ssc` | Quadratic drag: 0.5*rho*Cd*A*v*|v| |
 
 ### Models
 | File | Purpose |
 |------|---------|
 | `models/scuba_buoyancy_sim.slx` | Top-level model with subsystem hierarchy (see below) |
-| `models/test_breathing.slx` | Breathing circuit test harness |
+| `models/test_breathing.slx` | Legacy breathing circuit test harness (unused, can be removed) |
 
 #### Model Hierarchy (`scuba_buoyancy_sim.slx`)
 ```
 root
-├── Inports: breathing_rate, breath_depth, inflate_btn, purge_btn
-├── Controllers/        — BreathingController (Stateflow), BCDController (Stateflow)
-├── GasCircuit/         — Tank, regulators, lungs, BCD, valves, SPS converters, Solver
-└── Mechanics/          — DiverMass, BuoyancyForce, HydroDrag, AmbientPressure, MotionSensor, Scopes
++-- Inports: breathing_rate, breath_depth, inflate_btn, purge_btn
++-- Controllers/        -- BreathingController (Stateflow), BCDController (Stateflow)
++-- GasCircuit/         -- Tank, regulators, lungs, BCD, valves, SPS converters, Solver
++-- Mechanics/          -- DiverMass, BuoyancyForce, HydroDrag, AmbientPressure, MotionSensor, Scopes
 ```
 
 ### Parameters
@@ -147,11 +151,24 @@ root
 | `scripts/build_library.m` | Runs `sscbuild('scuba')` |
 | `scripts/plot_results.m` | 6-panel post-simulation visualization |
 
+### Tests
+| File | Purpose |
+|------|---------|
+| `tests/ScubaTestHelper.m` | Shared test infrastructure (model load, logging, signal extraction) |
+| `tests/tGasDomainBasic.m` | Flow conservation, tank pressure, depletion (3 tests) |
+| `tests/tRegulatorSetPoint.m` | 1st/2nd stage regulator behavior (4 tests) |
+| `tests/tBreathingCycle.m` | Lung volume, moles/breath, frequency, positivity (4 tests) |
+| `tests/tBCDInflateDeflate.m` | Inflate, purge, hold, V_max, monotonicity (5 tests) |
+| `tests/tWetsuitDrag.m` | Wetsuit compression, drag formula (6 tests, analytical) |
+| `tests/tBuoyancyManeuvers.m` | Neutral hold, descent, ascent, BCD control (7 tests) |
+| `tests/tDiveProfiles.m` | Profile scenarios, instability, consumption (5 tests) |
+| `tests/tPhysicsValidation.m` | Analytical physics: Boyle's law, Archimedes, terminal velocity, mass balance (7 tests) |
+
 ### Documentation
 | File | Purpose |
 |------|---------|
 | `docs/implementation_plan.md` | Architecture and phase plan |
-| `docs/test_plan.md` | 25 tests across 4 tiers with pass criteria |
+| `docs/test_plan.md` | 41 tests across 4 tiers with pass criteria |
 | `docs/diary.md` | Design diary (records architecture iterations and implementation notes) |
 | `docs/handoff.md` | This file |
 
@@ -165,9 +182,10 @@ root
 2. **Demand-driven breathing** — Muscular effort pressure triggers the regulator physically
 3. **Molar flow as through variable** — Natural for ideal gas; conserved quantity
 4. **Isothermal assumption** — T is a domain parameter, not dynamic state
-5. **Position-based translational (β=90°)** — Depth = position, positive downward
+5. **Position-based translational (beta=90 deg)** — Depth = position, positive downward
 6. **Wetsuit compression exponent 0.7** — Empirical, partial structural constraint
 7. **Weight integrated into BuoyancyForceSource** — Eliminates separate gravity block and PS connection issues
+8. **Modern Simscape constructs** — No deprecated `function setup`; uses variable priority for initialization and inline node params for propagation
 
 ### Numerical Solutions Discovered
 
@@ -175,20 +193,20 @@ root
 |---------|----------|
 | IP node singular matrix (two regulators sharing node) | Added GasVolume (100mL) between regulators |
 | Lung volume divergence (unbounded gas accumulation) | 2nd stage uses demand-proportional flow: (P_amb - P_lung - P_crack) / R_open |
-| 2nd stage unrealistic flow rates | Flow driven by demand pressure (≈200 Pa), not full IP differential (≈10 bar) |
+| 2nd stage unrealistic flow rates | Flow driven by demand pressure (~200 Pa), not full IP differential (~10 bar) |
 | Hard stop singularity at t=0 | Removed for now; re-add with proper initialization |
 | `R.f` balancing variable error | Through variables must use `branches` section, not direct equation reference |
-| Domain param propagation | Requires `component(Propagation = source)` attribute |
+| Domain param propagation | Requires inline node declaration: `A = domain(param = val)` |
 
 ### Tuned Parameter Values
 
 | Parameter | Value | Rationale |
 |-----------|-------|-----------|
-| 2nd stage R_open | 6000 Pa·s/mol | Gives ~0.5L tidal volume with 200 Pa effort |
-| Exhale valve R_open | 9000 Pa·s/mol | Balances inhale rate for steady-state lung volume |
+| 2nd stage R_open | 6000 Pa*s/mol | Gives regulator-limited tidal volume with 200 Pa effort |
+| Exhale valve R_open | 9000 Pa*s/mol | Balances inhale rate for steady-state lung volume |
 | IP volume | 100 mL (n_init=0.04518 mol) | Provides pressure state without affecting dynamics |
 | BCD n_init | 0.298 mol | Approximately neutral buoyancy at 20m |
-| n_tank initial | 98.47 mol | = 200e5 × 0.012 / (8.314 × 293.15) |
+| n_tank initial | 98.47 mol | = 200e5 * 0.012 / (8.314 * 293.15) |
 
 ---
 
@@ -196,17 +214,18 @@ root
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Hard stop at surface | Deferred | Removed due to initialization singularity; re-add in Phase 8 with initial depth away from contact |
+| Hard stop at surface | Deferred | Removed due to initialization singularity; re-add with initial depth away from contact |
 | Valve discontinuities | Working | if/else formulation works with ode23t; may need tanh smoothing if solver struggles in edge cases |
 | Gas mix switching | Deferred | Currently a parameter, not dynamic. Hot-switching needs additional architecture |
 | BCD V_max overflow | Implemented | BCDBladder uses wall stiffness K_wall when V > V_max |
 | Breathing controller fidelity | Complete | Stateflow 4-state machine replaces sine wave |
+| test_breathing.slx | Unused | Legacy harness from Phase 3, can be deleted |
 
 ---
 
 ## Blockers
 
-None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controllers output correct signals and model runs stably for 120s+.
+None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controllers output correct signals and model runs stably for 120s+. Test suite validates all physics.
 
 ---
 
@@ -218,11 +237,11 @@ None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controll
 3. Real-time pacing for interactive simulation
 4. `create_input_profiles.m` for scripted dive scenarios
 
-### Phase 8: Testing & Polish
-1. Formal test suite (analytical verification against known solutions)
-2. Re-integrate hard stop at surface with proper initialization
-3. Parameter sweep / sensitivity analysis
-4. Gas mix switching support
+### Remaining Phase 8 Polish
+1. Re-integrate hard stop at surface with proper initialization
+2. Parameter sweep / sensitivity analysis
+3. Gas mix switching support
+4. Delete unused `test_breathing.slx`
 5. Documentation finalization
 
 ---
@@ -246,7 +265,8 @@ None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controll
    out = sim(simIn);
    ```
 6. Visualize: `plot_results(out)` after simulation completes
-7. Continue with Phase 7 per the plan above
+7. Run tests: `results = runtests('tests'); disp(results);`
+8. Continue with Phase 7 per the plan above
 
 ---
 
@@ -254,12 +274,12 @@ None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controll
 
 | Parameter | Value | Note |
 |-----------|-------|------|
-| ρ_water | 1025 kg/m³ | Saltwater |
+| rho_water | 1025 kg/m^3 | Saltwater |
 | P_atm | 101,325 Pa | 1 atm |
 | Tank | 12 L, 200 bar | 98.47 mol initial |
 | IP offset | 10 bar above ambient | 1st stage set point |
 | 2nd stage P_crack | 100 Pa | Work of breathing |
-| Tidal volume | ~0.5 L | Achieved via R_open tuning |
+| 2nd stage R_open | 6000 Pa*s/mol | Regulator-limited delivery |
 | Breathing rate | 15 bpm (0.25 Hz) | Relaxed diver |
 | BCD max | 15 L | Bladder capacity |
 | Wetsuit V_surface | 6.3 L | Gas volume at surface |

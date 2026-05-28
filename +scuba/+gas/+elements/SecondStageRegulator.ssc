@@ -9,10 +9,6 @@ component SecondStageRegulator
         B = scuba.gas.gas;  % Breathing outlet:right
     end
 
-    inputs
-        P_amb = {101325, 'Pa'};  % Ambient pressure
-    end
-
     parameters
         P_crack = {100, 'Pa'};           % Cracking pressure (work of breathing)
         R_open  = {6000, 'Pa*s/mol'};    % Flow resistance when open
@@ -27,8 +23,9 @@ component SecondStageRegulator
     end
 
     equations
+        A.p_amb == B.p_amb;
         let
-            demand = P_amb - B.p;
+            demand = A.p_amb - B.p;
         in
             n_dot == if demand > P_crack
                 (demand - P_crack) / R_open

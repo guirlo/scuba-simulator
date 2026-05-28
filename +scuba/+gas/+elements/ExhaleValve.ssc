@@ -22,6 +22,7 @@ component ExhaleValve
     end
 
     equations
+        A.p_amb == B.p_amb;
         let
             p_diff = A.p - B.p;
         in

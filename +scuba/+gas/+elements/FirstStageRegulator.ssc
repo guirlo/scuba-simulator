@@ -8,10 +8,6 @@ component FirstStageRegulator
         B = scuba.gas.gas;  % IP outlet:right
     end
 
-    inputs
-        P_amb = {101325, 'Pa'};  % Ambient pressure
-    end
-
     parameters
         IP_offset = {10e5, 'Pa'};        % Setpoint above ambient (10 bar)
         R_open    = {1e3, 'Pa*s/mol'};   % Flow resistance when regulating
@@ -26,8 +22,9 @@ component FirstStageRegulator
     end
 
     equations
+        A.p_amb == B.p_amb;
         let
-            P_set = P_amb + IP_offset;
+            P_set = A.p_amb + IP_offset;
             P_target = if A.p < P_set, A.p else P_set end;
             p_err = P_target - B.p;
         in
