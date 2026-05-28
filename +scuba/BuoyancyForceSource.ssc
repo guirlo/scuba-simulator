@@ -29,7 +29,7 @@ component BuoyancyForceSource
     end
 
     branches
-        f : R.f -> *;
+        f : * -> R.f;
     end
 
     equations
