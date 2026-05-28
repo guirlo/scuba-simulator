@@ -27,7 +27,7 @@ Build a 1D vertical buoyancy simulation of a scuba diver in Simulink/Simscape th
 | Plant — Gas | Custom Simscape domain (`+scuba/+gas/`) | Physical gas flow: tank, regulators, lungs, BCD, valves |
 | Plant — Mechanical | Simscape Translational (Position-Based, beta=90 deg) | 1-DOF vertical motion, buoyancy force, drag |
 | Control | Simulink + Stateflow | Breathing state machine, BCD commands, dashboard UI |
-| Coupling | Physical Signal (PS) ports | P_amb (mech->gas), volumes (gas->mech), commands (Simulink->gas) |
+| Coupling | Domain across variable + PS ports | P_amb (mech->AmbientRef->domain), volumes (gas->mech), commands (Simulink->gas) |
 
 Key design principle: Gas flow is driven by **pressure differentials**, not command signals. The 2nd stage regulator opens physically when the diver's breathing effort creates suction. The BCD fills because opening the inflate valve exposes it to intermediate pressure.
 
@@ -37,7 +37,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 
 ### Accomplishments (Phases 1–6 Complete, Phase 8 Test Suite Complete)
 
-1. **Custom gas domain implemented and compiling** — `scuba.gas` domain with pressure (across) and molar flow (through) variables, compiled via `sscbuild('scuba')` into `scuba_lib`.
+1. **Custom gas domain implemented and compiling** — `scuba.gas` domain with pressure and ambient pressure (across) and molar flow (through) variables, compiled via `sscbuild('scuba')` into `scuba_lib`. P_amb propagates through the domain connection — only AmbientReference takes it as a PS input.
 
 2. **Full gas component library (13 blocks)** — GasTank, FirstStageRegulator, GasVolume, SecondStageRegulator, Lungs, ExhaleValve, BCDInflateValve, BCDBladder, PurgeValve, AmbientReference, GasDomainProperties all working.
 
@@ -101,7 +101,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 ### Custom Simscape Domain (`+scuba/+gas/`)
 | File | Purpose |
 |------|---------|
-| `+scuba/+gas/gas.ssc` | Domain definition (p across, n_dot through, R_gas, T params) |
+| `+scuba/+gas/gas.ssc` | Domain definition (p, p_amb across; n_dot through; R_gas, T params) |
 | `+scuba/+gas/branch.ssc` | Two-port base class (A->B, p_diff, n_dot) |
 | `+scuba/+gas/+elements/GasDomainProperties.ssc` | Propagation source for domain params |
 | `+scuba/+gas/+elements/GasTank.ssc` | HP reservoir (n_init=98.47 mol, V=12L) |
@@ -113,7 +113,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 | `+scuba/+gas/+elements/BCDInflateValve.ssc` | Commanded on/off valve |
 | `+scuba/+gas/+elements/BCDBladder.ssc` | Flexible accumulator (P=P_amb, V_max clamped) |
 | `+scuba/+gas/+elements/PurgeValve.ssc` | Commanded dump valve |
-| `+scuba/+gas/+elements/AmbientReference.ssc` | Infinite source/sink at P_amb |
+| `+scuba/+gas/+elements/AmbientReference.ssc` | Infinite source/sink at P_amb; injects p_amb into domain |
 
 ### Mechanical Coupling (`+scuba/`)
 | File | Purpose |
@@ -186,6 +186,7 @@ root
 6. **Wetsuit compression exponent 0.7** — Empirical, partial structural constraint
 7. **Weight integrated into BuoyancyForceSource** — Eliminates separate gravity block and PS connection issues
 8. **Modern Simscape constructs** — No deprecated `function setup`; uses variable priority for initialization and inline node params for propagation
+9. **P_amb as domain across variable** — Ambient pressure propagates through gas connections (set by AmbientReference, read via `A.p_amb` by all components). Eliminates individual PS wires to each block
 
 ### Numerical Solutions Discovered
 
