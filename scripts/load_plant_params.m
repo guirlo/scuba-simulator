@@ -63,4 +63,12 @@ assignin('base', 'drag_A_frontal',  params.diver.frontalArea);
 %% Diver Mass (Simscape Mass block)
 assignin('base', 'diver_mass_total', params.diver.totalMass);
 
+%% Breathing Control
+assignin('base', 'bc_deadzone',      params.breathControl.deadzone);
+assignin('base', 'bc_saturation',    params.breathControl.saturation);
+assignin('base', 'bc_K_vel',         params.breathControl.K_vel);
+assignin('base', 'bc_duty_shift',    params.breathControl.dutyShiftMax);
+assignin('base', 'bc_amp_gain',      params.breathControl.amplitudeGain);
+assignin('base', 'bc_bcd_deadband',  params.breathControl.bcdDeadband);
+
 end

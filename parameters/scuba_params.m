@@ -71,6 +71,14 @@ params.breathing.tidalVolume = 0.5e-3; % m^3 (0.5 L normal)
 params.breathing.residualVolume = 1.5e-3; % m^3 (1.5 L)
 params.breathing.maxVolume = 6e-3;     % m^3 (total lung capacity)
 
+%% Breathing Control (depth trim via respiratory bias)
+params.breathControl.deadzone = 0.3;        % m - no bias below this error
+params.breathControl.saturation = 1.5;      % m - bias saturates to +/-1
+params.breathControl.K_vel = 0.8;           % s/m - velocity damping gain
+params.breathControl.dutyShiftMax = 0.10;   % fraction of cycle shifted per direction
+params.breathControl.amplitudeGain = 0.3;   % +/-30% asymmetry at full bias
+params.breathControl.bcdDeadband = 2.0;     % m - BCD only fires beyond this error
+
 %% Initial Conditions
 params.ic.depth = 20;                  % m (initial depth)
 

@@ -4,7 +4,7 @@
 **Project:** scuba-buoyancy  
 **Location:** `L:\Projects\scuba`  
 **MATLAB version:** R2026a  
-**Status:** Phases 1–6 complete. Depth controller and full 36-min dive profile implemented. Test suite (Phase 8) complete — all 41 tests passing. Dashboard (Phase 7) and remaining polish remain.
+**Status:** Phases 1–6 complete. Two-tier depth controller (breathing trim + BCD) and full 36-min dive profile implemented. Test suite (Phase 8) complete — all 48 tests passing. Dashboard (Phase 7) and remaining polish remain.
 
 ---
 
@@ -59,7 +59,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 
 11. **Deprecated `function setup` removed** — All Simscape components use modern constructs: `{value = param, priority = priority.high}` for state initialization, inline node declaration for domain parameter propagation.
 
-12. **Test suite complete and passing** — 41 tests across 8 test classes, all passing. Covers flow conservation, ideal gas law, regulator behavior, breathing mechanics, BCD operation, buoyancy maneuvers, dive profiles, and analytical physics validation.
+12. **Test suite complete and passing** — 48 tests across 9 test classes, all passing. Covers flow conservation, ideal gas law, regulator behavior, breathing mechanics, BCD operation, buoyancy maneuvers, dive profiles, analytical physics validation, and breathing-based depth control.
 
 13. **Custom SVG mask icons** — All 14 Simscape components have custom SVG icons (schematic-style line art) via `annotations` blocks referencing SVG files in `images/` directories. Icons are embedded in `scuba_lib.slx` on rebuild.
 
@@ -71,14 +71,17 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 
 17. **PurgeValve enhanced with P_dump** — 5000 Pa mechanical dump bias enables active BCD venting even when bladder is not overfull. Models hydrostatic head from raising dump valve. Flow clamped non-negative (one-way: BCD to water).
 
-### Simulation Results (36-min dive profile)
+18. **Two-tier depth controller: breathing trim + BCD** — Realistic depth control hierarchy matching real diver behavior. Inner loop modulates breathing waveform (duty cycle shift ±10%, amplitude asymmetry ±30%) via `breath_bias` signal to adjust time-averaged lung volume for fine-trim depth holding (±0.3–1.5m error zone). Outer loop (BCD bang-bang) activates only for large errors (>2m) or rate limiting. `breath_bias` is latched per breath cycle to prevent mid-breath discontinuities. BiasSwitch passes zero bias in manual mode (auto_depth=0).
 
-- Diver tracks 30m target with ±2m accuracy (std=1.6m during bottom phase)
+### Simulation Results (36-min dive profile, two-tier controller)
+
+- Diver tracks 30m target with mean error 0.49m, std 1.86m during bottom phase
+- Breathing trim handles fine adjustments; BCD fires only for transitions and rate limiting
 - Stepped ascent followed through all 5m increments
-- Max ascent rate: 0.64 m/s (physics-limited by Boyle expansion vs purge rate; 0.15 m/s target is aspirational)
-- Tank consumption: 123 bar (200→77 bar) — realistic for 36 min at 30m
+- Max ascent rate: 0.74 m/s (physics-limited by Boyle expansion vs purge rate; 0.15 m/s target is aspirational)
+- Tank consumption: 104 bar (200→96 bar) — realistic for 36 min at 30m
 - Safety stop at 5m maintained correctly
-- All 41 tests pass (no regressions)
+- All 48 tests pass (no regressions)
 
 ### Simulation Results (120s run, Phase 6 — original open-loop)
 
@@ -155,7 +158,7 @@ root
 +-- Inports: breathing_rate, breath_depth, inflate_btn, purge_btn, depth_target, auto_depth
 +-- Controllers/        -- BreathingController (Stateflow), BCDController (Stateflow),
 |                          DepthController (MATLAB Function), InflateSwitch, PurgeSwitch,
-|                          DepthMemory, VelMemory
+|                          BiasSwitch, ZeroBias, DepthMemory, VelMemory
 +-- GasCircuit/         -- Tank, regulators, lungs, BCD, valves, SPS converters, Solver
 +-- Mechanics/          -- DiverMass, BuoyancyForce, HydroDrag, AmbientPressure, MotionSensor, Scopes
                            (outputs: P_amb, depth, velocity)
@@ -190,6 +193,7 @@ root
 | `tests/tWetsuitDrag.m` | Wetsuit compression, drag formula (6 tests, analytical) |
 | `tests/tBuoyancyManeuvers.m` | Neutral hold, descent, ascent, BCD control (7 tests) |
 | `tests/tDiveProfiles.m` | Profile scenarios, instability, consumption (5 tests) |
+| `tests/tBreathingControl.m` | Breathing-based depth control: bias asymmetry, trim direction, BCD handoff (7 tests) |
 | `tests/tPhysicsValidation.m` | Analytical physics: Boyle's law, Archimedes, terminal velocity, mass balance (7 tests) |
 
 ### Documentation
@@ -220,6 +224,7 @@ root
 12. **Depth controller as MATLAB Function block** — Bang-bang with deadband, not PID. Chosen because plant is fundamentally unstable (Boyle expansion positive feedback) and valve actuation is binary (open/closed). Velocity damping provides station-keeping. Memory blocks break algebraic loop.
 13. **Asymmetric inflate/purge rates for controllability** — BCD inflate valve R_open=5e6 (gives ~0.2 mol/s) to prevent controller overshoot. Purge P_dump=5000 Pa with R_open=1e4 (gives ~0.5 mol/s) for faster venting during Boyle-expansion-driven ascent.
 14. **Diver weighting: 93 kg for surface-start dives** — Default 89 kg is neutral at surface with no BCD gas. Surface-start dive requires ~2 kg overweight (93 kg total) so diver can descend passively. Override via `setBlockParameter` in run scripts; base params unchanged for existing tests.
+15. **Two-tier depth control: breathing inner loop + BCD outer loop** — Breathing bias (proportional + velocity damping) provides continuous fine-trim within ±0.3–1.5m error zone. BCD bang-bang fires only beyond 2m deadband or for rate limiting. Bias is latched once per breath cycle (4s at 15 bpm) for smooth waveforms. Combined duty cycle shift (±10%) and amplitude asymmetry (±30%) gives ~1–2N trim authority via time-averaged lung volume shift. Manual mode (auto_depth=0) passes bias=0 for symmetric breathing.
 
 ### Numerical Solutions Discovered
 
@@ -234,7 +239,8 @@ root
 | Depth controller algebraic loop | Memory blocks on depth/velocity feedback break the loop |
 | BCD purge ineffective (zero pressure diff) | Added P_dump parameter (5000 Pa) to PurgeValve, clamped non-negative |
 | Controller overshoot from fast inflate | Increased BCDInflateValve R_open from 2e4 to 5e6 Pa*s/mol |
-| Boyle expansion exceeds purge rate during ascent | Physics-correct: max ascent ~0.64 m/s with current valve sizing (not a bug) |
+| Boyle expansion exceeds purge rate during ascent | Physics-correct: max ascent ~0.74 m/s with current valve sizing (not a bug) |
+| DepthMemory IC causes first-cycle bias inversion | Set DepthMemory InitialCondition to `ic_depth` workspace variable (not constant) |
 
 ### Tuned Parameter Values
 
@@ -248,7 +254,12 @@ root
 | Purge P_dump | 5000 Pa | Enables active dump; models hydrostatic head |
 | Purge R_open | 1e4 Pa*s/mol | With P_dump gives ~0.5 mol/s vent rate |
 | n_tank initial | 98.47 mol | = 200e5 * 0.012 / (8.314 * 293.15) |
-| Depth controller deadband | ±2 m | Reduces limit cycling on unstable plant |
+| BCD deadband | ±2 m | BCD only fires for large errors; breathing handles fine trim |
+| Breath deadzone | 0.3 m | No bias correction below this error |
+| Breath saturation | 1.5 m | Bias saturates at ±1 at this error |
+| Breath velocity damping | 0.8 s/m | Prevents bias oscillation from 4s breathing lag |
+| Duty cycle shift max | ±10% | Inhale/pause longer, exhale shorter with positive bias |
+| Amplitude asymmetry max | ±30% | Inhale peak 260 Pa (vs 200 Pa base) at full bias |
 | Max ascent rate | 0.15 m/s | 9 m/min recreational diving limit |
 | Diver mass (dive profile) | 93 kg | Surface-start: 80 body + 8 belt + 5 gear |
 
