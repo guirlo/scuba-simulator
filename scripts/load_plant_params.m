@@ -41,6 +41,7 @@ assignin('base', 'bcd_n_init',      params.bcd.initMoles);
 
 %% Purge Valve
 assignin('base', 'purge_R_open',    params.purgeValve.R_open);
+assignin('base', 'purge_P_dump',    5000);
 
 %% Ambient Pressure Sensor
 assignin('base', 'env_rho_water',   params.water.rho);

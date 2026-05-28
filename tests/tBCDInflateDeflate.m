@@ -86,7 +86,9 @@ classdef tBCDInflateDeflate < matlab.unittest.TestCase
         end
 
         function testHoldPhaseConstant(testCase)
-            % After inflate, volume should remain approximately constant.
+            % After inflate, gas content (moles) should remain constant
+            % when both valves are closed. Volume may vary with depth drift
+            % (correct Boyle's law physics).
             simTime = 20;
             t = [0; 1; 1.01; 4; 4.01; 20];
             inflateVec = [0; 0; 1; 1; 0; 0];
@@ -99,17 +101,16 @@ classdef tBCDInflateDeflate < matlab.unittest.TestCase
             simIn = ScubaTestHelper.configureSimInput(simTime, ds);
             out = ScubaTestHelper.runSim(simIn);
 
-            V_bcd = ScubaTestHelper.getSignal(out.logsout, 'V_bcd');
+            n_bcd = ScubaTestHelper.getSignal(out.logsout, 'n_bcd');
 
-            % Check hold phase (t=6 to t=18) is stable
-            % Note: depth may drift slightly changing BCD volume
-            mask_hold = V_bcd.Time > 6 & V_bcd.Time < 18;
-            V_hold = V_bcd.Data(mask_hold);
+            % Check hold phase: moles should be constant (valves closed)
+            mask_hold = n_bcd.Time > 6 & n_bcd.Time < 18;
+            n_hold = n_bcd.Data(mask_hold);
 
-            if ~isempty(V_hold)
-                relative_variation = (max(V_hold) - min(V_hold)) / mean(V_hold);
+            if ~isempty(n_hold)
+                relative_variation = (max(n_hold) - min(n_hold)) / mean(n_hold);
                 testCase.verifyLessThan(relative_variation, 0.05, ...
-                    sprintf('BCD volume variation %.1f%% during hold exceeds 5%%', ...
+                    sprintf('BCD moles variation %.1f%% during hold exceeds 5%%', ...
                     relative_variation*100));
             end
         end

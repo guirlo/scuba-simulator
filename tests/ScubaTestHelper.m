@@ -101,6 +101,8 @@ classdef ScubaTestHelper
             ds = ds.addElement(timeseries(depth*ones(2,1), t), 'breath_depth');
             ds = ds.addElement(timeseries(inflate*ones(2,1), t), 'inflate_btn');
             ds = ds.addElement(timeseries(purge*ones(2,1), t), 'purge_btn');
+            ds = ds.addElement(timeseries(zeros(2,1), t), 'depth_target');
+            ds = ds.addElement(timeseries(zeros(2,1), t), 'auto_depth');
         end
 
         function ds = createProfileDataset(simTime, timeVec, rateVec, depthVec, inflateVec, purgeVec)
@@ -110,6 +112,8 @@ classdef ScubaTestHelper
             ds = ds.addElement(timeseries(depthVec, timeVec), 'breath_depth');
             ds = ds.addElement(timeseries(inflateVec, timeVec), 'inflate_btn');
             ds = ds.addElement(timeseries(purgeVec, timeVec), 'purge_btn');
+            ds = ds.addElement(timeseries(zeros(size(timeVec)), timeVec), 'depth_target');
+            ds = ds.addElement(timeseries(zeros(size(timeVec)), timeVec), 'auto_depth');
         end
 
         function simIn = configureSimInput(simTime, ds, blockParams)

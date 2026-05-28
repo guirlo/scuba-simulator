@@ -34,7 +34,7 @@ params.exhaleValve.P_crack = 50;       % Pa
 params.exhaleValve.R_open = 9000;      % Pa*s/mol
 
 %% BCD Inflate Valve
-params.bcdInflateValve.R_open = 2e4;   % Pa*s/mol
+params.bcdInflateValve.R_open = 5e6;   % Pa*s/mol (~0.2 mol/s, symmetric with purge)
 
 %% BCD Bladder
 params.bcd.maxVolume = 0.015;          % m^3 (15 L capacity)
@@ -44,7 +44,7 @@ params.bcd.inflateRate = 5e-4;         % m^3/s at ambient pressure
 params.bcd.deflateRate = 1e-3;         % m^3/s vent rate
 
 %% Purge Valve
-params.purgeValve.R_open = 1e4;        % Pa*s/mol
+params.purgeValve.R_open = 1e4;        % Pa*s/mol (with P_dump=2000 gives ~0.2 mol/s)
 
 %% Diver
 params.diver.mass = 80;                % kg (body mass)
