@@ -1,10 +1,10 @@
 # Project Handoff — Scuba Buoyancy Simulation
 
-**Date:** 2026-05-27  
+**Date:** 2026-05-28  
 **Project:** scuba-buoyancy  
 **Location:** `L:\Projects\scuba`  
 **MATLAB version:** R2026a  
-**Status:** Phases 1–6 complete. Test suite (Phase 8) implemented and all 41 tests passing. Custom SVG block icons added. Plant parameterization externalized to workspace variables. Dashboard (Phase 7) and remaining polish remain.
+**Status:** Phases 1–6 complete. Depth controller and full 36-min dive profile implemented. Test suite (Phase 8) complete — all 41 tests passing. Dashboard (Phase 7) and remaining polish remain.
 
 ---
 
@@ -35,7 +35,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 
 ## Current Progress
 
-### Accomplishments (Phases 1–6 Complete, Phase 8 Test Suite Complete)
+### Accomplishments (Phases 1–6 Complete, Depth Controller Added, Phase 8 Test Suite Complete)
 
 1. **Custom gas domain implemented and compiling** — `scuba.gas` domain with pressure and ambient pressure (across) and molar flow (through) variables, compiled via `sscbuild('scuba')` into `scuba_lib`. P_amb propagates through the domain connection — only AmbientReference takes it as a PS input.
 
@@ -53,7 +53,7 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 
 8. **BCD controller** — 3-state machine (IDLE/INFLATING/PURGING) with mutual exclusion (inflate priority). Accepts button inputs, outputs valve commands.
 
-9. **Root-level Inport blocks** — `breathing_rate`, `breath_depth`, `inflate_btn`, `purge_btn` as model inports, ready for timeseries input via `Simulink.SimulationData.Dataset`.
+9. **Root-level Inport blocks** — `breathing_rate`, `breath_depth`, `inflate_btn`, `purge_btn`, `depth_target`, `auto_depth` as model inports. When `auto_depth > 0.5`, the DepthController overrides manual BCD buttons.
 
 10. **Model reorganized into subsystems** — Controllers, GasCircuit, Mechanics with named ports (P_amb, V_bcd, V_lungs, breath_effort, inflate_cmd, purge_cmd).
 
@@ -65,7 +65,22 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 
 14. **Externalized plant parameters** — All hardcoded numerical values removed from Simscape block dialogs. Block parameters reference workspace variables (e.g., `tank_V`, `reg1_IP_offset`, `env_rho_water`) populated by `load_plant_params()` from the master `scuba_params()` struct. Single source of truth for all plant tuning.
 
-### Simulation Results (120s run, Phase 6)
+15. **Depth controller with full dive profile** — Closed-loop depth-following controller (MATLAB Function block) commands BCD inflate/purge to track a target depth trajectory. Bang-bang with ±2m deadband, velocity damping, and ascent/descent rate limiting. Mode switch selects manual (buttons) vs auto (controller). Memory blocks break algebraic loop.
+
+16. **36-minute dive profile** — Surface start (1m) → descent to 30m → 20 min bottom → stepped 5m ascent with 1-min holds → 3-min safety stop at 5m → return to 1m. Script `create_dive_profile.m` generates the dataset; `run_full_dive.m` runs end-to-end.
+
+17. **PurgeValve enhanced with P_dump** — 5000 Pa mechanical dump bias enables active BCD venting even when bladder is not overfull. Models hydrostatic head from raising dump valve. Flow clamped non-negative (one-way: BCD to water).
+
+### Simulation Results (36-min dive profile)
+
+- Diver tracks 30m target with ±2m accuracy (std=1.6m during bottom phase)
+- Stepped ascent followed through all 5m increments
+- Max ascent rate: 0.64 m/s (physics-limited by Boyle expansion vs purge rate; 0.15 m/s target is aspirational)
+- Tank consumption: 123 bar (200→77 bar) — realistic for 36 min at 30m
+- Safety stop at 5m maintained correctly
+- All 41 tests pass (no regressions)
+
+### Simulation Results (120s run, Phase 6 — original open-loop)
 
 - Diver starts at 20m, drifts to ~18.9m (less drift than sine wave due to pause phases)
 - Tank consumes ~0.278 mol over 120s (lower than 0.36 with sine because pauses reduce active breathing time)
@@ -137,10 +152,13 @@ Key design principle: Gas flow is driven by **pressure differentials**, not comm
 #### Model Hierarchy (`scuba_buoyancy_sim.slx`)
 ```
 root
-+-- Inports: breathing_rate, breath_depth, inflate_btn, purge_btn
-+-- Controllers/        -- BreathingController (Stateflow), BCDController (Stateflow)
++-- Inports: breathing_rate, breath_depth, inflate_btn, purge_btn, depth_target, auto_depth
++-- Controllers/        -- BreathingController (Stateflow), BCDController (Stateflow),
+|                          DepthController (MATLAB Function), InflateSwitch, PurgeSwitch,
+|                          DepthMemory, VelMemory
 +-- GasCircuit/         -- Tank, regulators, lungs, BCD, valves, SPS converters, Solver
 +-- Mechanics/          -- DiverMass, BuoyancyForce, HydroDrag, AmbientPressure, MotionSensor, Scopes
+                           (outputs: P_amb, depth, velocity)
 ```
 
 ### Parameters
@@ -153,7 +171,10 @@ root
 ### Scripts
 | File | Purpose |
 |------|---------|
-| `scripts/run_simulation.m` | Programmatic sim runner |
+| `scripts/run_simulation.m` | Programmatic sim runner (open-loop, short runs) |
+| `scripts/run_full_dive.m` | Full 36-min dive profile with depth controller |
+| `scripts/create_dive_profile.m` | Generates dive profile dataset (descent, bottom, stepped ascent, safety stop) |
+| `scripts/plot_dive_results.m` | 3-panel dive results (depth+target, tank pressure, BCD volume) |
 | `scripts/build_library.m` | Runs `sscbuild('scuba')` |
 | `scripts/plot_results.m` | 6-panel post-simulation visualization |
 | `scripts/load_plant_params.m` | Flattens `params` struct into workspace variables for Simscape block dialogs |
@@ -196,6 +217,9 @@ root
 9. **P_amb as domain across variable** — Ambient pressure propagates through gas connections (set by AmbientReference, read via `A.p_amb` by all components). Eliminates individual PS wires to each block
 10. **Externalized plant parameters** — All Simscape block values reference workspace variables (not hardcoded numbers). `scuba_params()` is the single source of truth; `load_plant_params()` flattens into named variables (e.g., `tank_V`, `reg1_IP_offset`). Block dialogs use these names directly.
 11. **Custom SVG mask icons via annotations** — Each `.ssc` component declares `annotations; Icon = 'images/Name.svg'; end`. SVGs are embedded into `scuba_lib.slx` during `sscbuild`.
+12. **Depth controller as MATLAB Function block** — Bang-bang with deadband, not PID. Chosen because plant is fundamentally unstable (Boyle expansion positive feedback) and valve actuation is binary (open/closed). Velocity damping provides station-keeping. Memory blocks break algebraic loop.
+13. **Asymmetric inflate/purge rates for controllability** — BCD inflate valve R_open=5e6 (gives ~0.2 mol/s) to prevent controller overshoot. Purge P_dump=5000 Pa with R_open=1e4 (gives ~0.5 mol/s) for faster venting during Boyle-expansion-driven ascent.
+14. **Diver weighting: 93 kg for surface-start dives** — Default 89 kg is neutral at surface with no BCD gas. Surface-start dive requires ~2 kg overweight (93 kg total) so diver can descend passively. Override via `setBlockParameter` in run scripts; base params unchanged for existing tests.
 
 ### Numerical Solutions Discovered
 
@@ -207,6 +231,10 @@ root
 | Hard stop singularity at t=0 | Removed for now; re-add with proper initialization |
 | `R.f` balancing variable error | Through variables must use `branches` section, not direct equation reference |
 | Domain param propagation | Requires inline node declaration: `A = domain(param = val)` |
+| Depth controller algebraic loop | Memory blocks on depth/velocity feedback break the loop |
+| BCD purge ineffective (zero pressure diff) | Added P_dump parameter (5000 Pa) to PurgeValve, clamped non-negative |
+| Controller overshoot from fast inflate | Increased BCDInflateValve R_open from 2e4 to 5e6 Pa*s/mol |
+| Boyle expansion exceeds purge rate during ascent | Physics-correct: max ascent ~0.64 m/s with current valve sizing (not a bug) |
 
 ### Tuned Parameter Values
 
@@ -215,8 +243,14 @@ root
 | 2nd stage R_open | 6000 Pa*s/mol | Gives regulator-limited tidal volume with 200 Pa effort |
 | Exhale valve R_open | 9000 Pa*s/mol | Balances inhale rate for steady-state lung volume |
 | IP volume | 100 mL (n_init=0.04518 mol) | Provides pressure state without affecting dynamics |
-| BCD n_init | 0.298 mol | Approximately neutral buoyancy at 20m |
+| BCD n_init | 0.298 mol | Approximately neutral buoyancy at 20m (open-loop tests) |
+| BCD inflate R_open | 5e6 Pa*s/mol | ~0.2 mol/s fill rate; prevents controller overshoot |
+| Purge P_dump | 5000 Pa | Enables active dump; models hydrostatic head |
+| Purge R_open | 1e4 Pa*s/mol | With P_dump gives ~0.5 mol/s vent rate |
 | n_tank initial | 98.47 mol | = 200e5 * 0.012 / (8.314 * 293.15) |
+| Depth controller deadband | ±2 m | Reduces limit cycling on unstable plant |
+| Max ascent rate | 0.15 m/s | 9 m/min recreational diving limit |
+| Diver mass (dive profile) | 93 kg | Surface-start: 80 body + 8 belt + 5 gear |
 
 ---
 
@@ -224,35 +258,38 @@ root
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Hard stop at surface | Deferred | Removed due to initialization singularity; re-add with initial depth away from contact |
+| Hard stop at surface | Deferred | Removed due to initialization singularity; dive profile starts at 1m to avoid |
 | Valve discontinuities | Working | if/else formulation works with ode23t; may need tanh smoothing if solver struggles in edge cases |
 | Gas mix switching | Deferred | Currently a parameter, not dynamic. Hot-switching needs additional architecture |
 | BCD V_max overflow | Implemented | BCDBladder uses wall stiffness K_wall when V > V_max |
 | Breathing controller fidelity | Complete | Stateflow 4-state machine replaces sine wave |
+| Ascent rate limiting | Partial | Controller targets 0.15 m/s but Boyle expansion limits actual to ~0.64 m/s during step transitions. Faster purge valve or proportional control would improve this. |
+| Depth controller oscillation | Acceptable | ±2m at target depth due to bang-bang on unstable plant. PID or proportional valve would reduce. |
 | test_breathing.slx | Unused | Legacy harness from Phase 3, can be deleted |
 
 ---
 
 ## Blockers
 
-None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controllers output correct signals and model runs stably for 120s+. Test suite validates all physics.
+None currently. Model runs stably for 36+ minutes with closed-loop depth control. All prerequisites for Phase 7 (Dashboard) are in place — auto/manual mode switching infrastructure exists. Test suite (41/41) validates all physics.
 
 ---
 
 ## Next Steps
 
 ### Phase 7: Dashboard & Visualization
-1. Simulink Dashboard blocks: knobs (rate, depth), buttons (inflate, purge), gauges (depth, tank, BCD), scopes
-2. Mode switch: manual vs. pre-programmed profiles
+1. Simulink Dashboard blocks: knobs (rate, depth), buttons (inflate, purge, auto mode), gauges (depth, tank, BCD), scopes
+2. Mode switch: manual vs. auto depth control (wiring exists — `auto_depth` inport)
 3. Real-time pacing for interactive simulation
-4. `create_input_profiles.m` for scripted dive scenarios
+4. Dive profile selector (pre-built profiles via `create_dive_profile.m` pattern)
 
 ### Remaining Phase 8 Polish
-1. Re-integrate hard stop at surface with proper initialization
-2. Parameter sweep / sensitivity analysis
-3. Gas mix switching support
-4. Delete unused `test_breathing.slx`
-5. Documentation finalization
+1. Improve ascent rate control (proportional purge valve or faster vent)
+2. Re-integrate hard stop at surface with proper initialization
+3. Parameter sweep / sensitivity analysis
+4. Gas mix switching support
+5. Delete unused `test_breathing.slx`
+6. Documentation finalization
 
 ---
 
@@ -261,9 +298,14 @@ None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controll
 1. Open MATLAB project: `openProject('L:\Projects\scuba')` or double-click `blank_project.prj` — `startup.m` auto-loads `params`, `gas`, and all plant variables into workspace
 2. Build the library: `run('scripts/build_library.m')` — compiles `.ssc` files (with SVG icons) into `scuba_lib`
 3. Open the model: `open_system('scuba_buoyancy_sim')`
-4. Run with default inputs: click Play (uses ground/zero for inports)
+4. **Run the full dive profile:**
+   ```matlab
+   run('scripts/run_full_dive.m')
+   ```
+   This creates the 36-min dive profile, configures initial conditions (1m depth, 93 kg diver, near-empty BCD), enables logging, simulates, and plots results.
+5. Run with default inputs (open-loop): click Play (uses ground/zero for inports — manual mode, diver at 20m)
    - If you get "undefined variable" errors, run `startup` to reload workspace variables
-5. Run with timeseries inputs:
+6. Run with custom timeseries inputs:
    ```matlab
    t = [0; 1800];
    ds = Simulink.SimulationData.Dataset;
@@ -271,13 +313,15 @@ None currently. All prerequisites for Phase 7 (Dashboard) are in place. Controll
    ds = ds.addElement(timeseries(ones(2,1), t), 'breath_depth');
    ds = ds.addElement(timeseries(zeros(2,1), t), 'inflate_btn');
    ds = ds.addElement(timeseries(zeros(2,1), t), 'purge_btn');
+   ds = ds.addElement(timeseries([20;20], t), 'depth_target');  % target depth
+   ds = ds.addElement(timeseries([1;1], t), 'auto_depth');      % 1=auto, 0=manual
    simIn = Simulink.SimulationInput('scuba_buoyancy_sim');
    simIn = simIn.setModelParameter('LoadExternalInput','on','ExternalInput','ds');
    out = sim(simIn);
    ```
-6. Visualize: `plot_results(out)` after simulation completes
-7. Run tests: `results = runtests('tests'); disp(results);`
-8. Continue with Phase 7 per the plan above
+7. Visualize: `plot_dive_results(out, ds)` or `plot_results(out)` after simulation
+8. Run tests: `results = runtests('tests'); disp(results);`
+9. Continue with Phase 7 per the plan above
 
 ---
 
@@ -297,10 +341,11 @@ All values defined in `parameters/scuba_params.m`, loaded into workspace by `loa
 | `reg2_R_open` | 6000 Pa*s/mol | `params.secondStage.R_open` |
 | `exhale_P_crack` | 50 Pa | `params.exhaleValve.P_crack` |
 | `exhale_R_open` | 9000 Pa*s/mol | `params.exhaleValve.R_open` |
-| `bcdinfl_R_open` | 2e4 Pa*s/mol | `params.bcdInflateValve.R_open` |
+| `bcdinfl_R_open` | 5e6 Pa*s/mol | `params.bcdInflateValve.R_open` |
 | `bcd_V_max` | 0.015 m^3 (15 L) | `params.bcd.maxVolume` |
 | `purge_R_open` | 1e4 Pa*s/mol | `params.purgeValve.R_open` |
-| `diver_m_total` | 89 kg | `params.diver.totalMass` (derived) |
+| `purge_P_dump` | 5000 Pa | Hardcoded in `load_plant_params.m` |
+| `diver_m_total` | 89 kg (93 for dive profile) | `params.diver.totalMass` (derived) |
 | `diver_V_body` | 0.078 m^3 | `params.diver.bodyVolume` |
 | `gear_V` | 0.003 m^3 | `params.gear.volume` |
 | `ws_V_surface` | 0.0063 m^3 | `params.wetsuit.surfaceVolume` (derived) |
