@@ -10,8 +10,8 @@ component PurgeValve
     end
 
     nodes
-        A = scuba.gas.gas;  % BCD side:left
-        B = scuba.gas.gas;  % Ambient side:right
+        A = scuba.gas.underwaterGas;  % BCD side:left
+        B = scuba.gas.underwaterGas;  % Ambient side:right
     end
 
     inputs

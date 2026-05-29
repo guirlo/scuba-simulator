@@ -8,7 +8,7 @@ component AmbientReference
     end
 
     nodes
-        A = scuba.gas.gas;  % :left
+        A = scuba.gas.underwaterGas;  % :left
     end
 
     inputs

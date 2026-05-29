@@ -8,8 +8,8 @@ component BCDInflateValve
     end
 
     nodes
-        A = scuba.gas.gas;  % IP side:left
-        B = scuba.gas.gas;  % BCD side:right
+        A = scuba.gas.underwaterGas;  % IP side:left
+        B = scuba.gas.underwaterGas;  % BCD side:right
     end
 
     inputs

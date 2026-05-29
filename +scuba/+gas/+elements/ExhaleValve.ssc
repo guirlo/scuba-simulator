@@ -8,8 +8,8 @@ component ExhaleValve
     end
 
     nodes
-        A = scuba.gas.gas;  % lung side:left
-        B = scuba.gas.gas;  % ambient side:right
+        A = scuba.gas.underwaterGas;  % lung side:left
+        B = scuba.gas.underwaterGas;  % ambient side:right
     end
 
     parameters

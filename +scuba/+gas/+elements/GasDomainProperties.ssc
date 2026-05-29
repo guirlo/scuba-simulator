@@ -7,7 +7,7 @@ component(Propagation = source) GasDomainProperties
     end
 
     nodes
-        A = scuba.gas.gas(R_gas = R_gas, T = T);  % :left
+        A = scuba.gas.underwaterGas(R_gas = R_gas, T = T);  % :left
     end
 
     parameters

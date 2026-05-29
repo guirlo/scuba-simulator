@@ -4,8 +4,8 @@ component branch
 % Provides ports A and B with pressure difference and molar flow.
 
     nodes
-        A = scuba.gas.gas;  % A:left
-        B = scuba.gas.gas;  % B:right
+        A = scuba.gas.underwaterGas;  % A:left
+        B = scuba.gas.underwaterGas;  % B:right
     end
 
     variables

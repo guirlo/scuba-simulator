@@ -10,8 +10,8 @@ component Lungs
     end
 
     nodes
-        A = scuba.gas.gas;  % inhale inlet:left
-        B = scuba.gas.gas;  % exhale outlet:right
+        A = scuba.gas.underwaterGas;  % inhale inlet:left
+        B = scuba.gas.underwaterGas;  % exhale outlet:right
     end
 
     inputs

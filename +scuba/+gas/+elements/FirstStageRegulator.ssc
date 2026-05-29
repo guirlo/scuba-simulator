@@ -8,8 +8,8 @@ component FirstStageRegulator
     end
 
     nodes
-        A = scuba.gas.gas;  % HP inlet:left
-        B = scuba.gas.gas;  % IP outlet:right
+        A = scuba.gas.underwaterGas;  % HP inlet:left
+        B = scuba.gas.underwaterGas;  % IP outlet:right
     end
 
     parameters

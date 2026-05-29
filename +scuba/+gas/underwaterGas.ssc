@@ -1,4 +1,4 @@
-domain gas
+domain underwaterGas
 % Custom gas domain for scuba simulation.
 % Across variable: pressure (Pa)
 % Through variable: molar flow rate (mol/s)

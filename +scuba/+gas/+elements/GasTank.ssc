@@ -8,7 +8,7 @@ component GasTank
     end
 
     nodes
-        A = scuba.gas.gas;  % outlet:right
+        A = scuba.gas.underwaterGas;  % outlet:right
     end
 
     parameters

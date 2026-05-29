@@ -1,6 +1,13 @@
 % Project startup script
 % Loads parameters into base workspace for Simulink model access
 
+% Add project root to path so Simscape resolves the +scuba domain package
+projRoot = fileparts(mfilename('fullpath'));
+addpath(projRoot);
+addpath(fullfile(projRoot, 'parameters'));
+addpath(fullfile(projRoot, 'scripts'));
+addpath(fullfile(projRoot, 'tests'));
+
 params = scuba_params();
 gas = gas_properties(params.tank.gasMix);
 load_plant_params();

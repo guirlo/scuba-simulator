@@ -9,7 +9,7 @@ component BCDBladder
     end
 
     nodes
-        A = scuba.gas.gas;  % inlet/outlet:left
+        A = scuba.gas.underwaterGas;  % inlet/outlet:left
     end
 
 
