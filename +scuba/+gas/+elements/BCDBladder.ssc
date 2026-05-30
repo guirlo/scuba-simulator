@@ -46,18 +46,24 @@ component BCDBladder
             T       = A.T;
             depth   = if R.x > {0, 'm'}, R.x else {0, 'm'} end;
             P_amb   = P_atm + rho_water * R.gravity * depth;
-            V_free  = n_bcd * R_gas * T / P_amb;
+            n_clamped = if n_bcd > {0, 'mol'}, n_bcd else {0, 'mol'} end;
+            V_free  = n_clamped * R_gas * T / P_amb;
             V_actual = if V_free < V_max, V_free else V_max end;
             P_excess = if V_free > V_max
                 K_wall * (V_free - V_max)
             else
                 {0, 'Pa'}
             end;
+            n_dot_clamped = if n_bcd <= {0, 'mol'} && n_dot_in < {0, 'mol/s'}
+                {0, 'mol/s'}
+            else
+                n_dot_in
+            end;
             F_buoy  = rho_water * R.gravity * V_actual;
         in
             A.p     == P_amb + P_excess;
             A.p_amb == P_amb;
-            der(n_bcd) == n_dot_in;
+            der(n_bcd) == n_dot_clamped;
             V_bcd == V_actual;
             f == -F_buoy;
         end
