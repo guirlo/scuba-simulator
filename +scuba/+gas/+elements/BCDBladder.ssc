@@ -6,9 +6,9 @@ component BCDBladder
 % Applies buoyancy force through position-based translational port.
 
     annotations
-        Icon = 'images/BCDBladder.svg';
+        Icon = 'images/bcd3.svg';
         [A] : Side = top;
-        [R] : Side = right;
+        [R] : Side = left;
         [V_bcd] : Side = right;
     end
 

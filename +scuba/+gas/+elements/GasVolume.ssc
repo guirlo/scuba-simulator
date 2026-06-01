@@ -5,10 +5,11 @@ component GasVolume
 
     annotations
         Icon = 'images/GasVolume.svg';
+        A : Side = bottom
     end
 
     nodes
-        A = scuba.gas.underwaterGas;  % :left
+        A = scuba.gas.underwaterGas;  %
     end
 
     parameters
