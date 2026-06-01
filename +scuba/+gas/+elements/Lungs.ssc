@@ -7,11 +7,13 @@ component Lungs
 
     annotations
         Icon = 'images/Lungs.svg';
+        [R] : Side = top;
     end
 
     nodes
-        A = scuba.gas.underwaterGas;  % inhale inlet:left
-        B = scuba.gas.underwaterGas;  % exhale outlet:right
+        A = scuba.gas.underwaterGas;                    % inhale inlet:left
+        B = scuba.gas.underwaterGas;                    % exhale outlet:right
+        R = foundation.translational.translational;     % position:right
     end
 
     inputs
@@ -23,12 +25,15 @@ component Lungs
     end
 
     parameters
-        n_init = {0.0624, 'mol'};    % Initial moles (residual vol at surface)
+        n_init    = {0.0624, 'mol'};    % Initial moles (residual vol at surface)
+        rho_water = {1025, 'kg/m^3'};   % Water density
+        P_atm     = {101325, 'Pa'};     % Atmospheric pressure
     end
 
     variables
         n_dot_in  = {0, 'mol/s'};    % Flow into lungs from A
         n_dot_out = {0, 'mol/s'};    % Flow out of lungs to B
+        f         = {0, 'N'};        % Force on translational port
     end
 
     variables(Access = private)
@@ -38,19 +43,22 @@ component Lungs
     branches
         n_dot_in  : A.n_dot -> *;
         n_dot_out : * -> B.n_dot;
+        f         : * -> R.f;
     end
 
     equations
-        A.p_amb == B.p_amb;
         let
             R_gas  = A.R_gas;
             T      = A.T;
-            P_lung = A.p_amb + breath_effort;
+            depth  = if R.x > {0, 'm'}, R.x else {0, 'm'} end;
+            P_amb  = P_atm + rho_water * R.gravity * depth;
+            P_lung = P_amb + breath_effort;
         in
+            f == {0, 'N'};
             A.p == P_lung;
             B.p == P_lung;
             der(n_lungs) == n_dot_in - n_dot_out;
-            V_lungs == n_lungs * R_gas * T / A.p_amb;
+            V_lungs == n_lungs * R_gas * T / P_amb;
         end
     end
 

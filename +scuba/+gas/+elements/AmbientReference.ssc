@@ -1,31 +1,41 @@
 component AmbientReference
 % Ambient Reference
 % Ambient pressure reference (infinite source/sink).
-% Sets port pressure to P_amb; absorbs or supplies any molar flow.
+% Computes ambient pressure from depth via translational port position.
 
     annotations
         Icon = 'images/AmbientReference.svg';
+        [R] : Side = top;
     end
 
     nodes
         A = scuba.gas.underwaterGas;  % :left
+        R = foundation.translational.translational;  % :right
     end
 
-    inputs
-        P_amb = {101325, 'Pa'};  % Ambient pressure
+    parameters
+        rho_water = {1025, 'kg/m^3'};  % Water density
+        P_atm     = {101325, 'Pa'};    % Atmospheric pressure
     end
 
     variables
-        n_dot_in = {0, 'mol/s'};  % Flow into reference (free variable)
+        n_dot_in = {0, 'mol/s'};  % Flow into reference
+        f        = {0, 'N'};      % Force on translational port
     end
 
     branches
         n_dot_in : A.n_dot -> *;
+        f        : * -> R.f;
     end
 
     equations
-        A.p == P_amb;
-        A.p_amb == P_amb;
+        let
+            depth = if R.x > {0, 'm'}, R.x else {0, 'm'} end;
+            P_amb = P_atm + rho_water * R.gravity * depth;
+        in
+            A.p == P_amb;
+            f == {0, 'N'};
+        end
     end
 
 end

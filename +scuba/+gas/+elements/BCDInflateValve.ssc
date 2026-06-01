@@ -29,12 +29,17 @@ component BCDInflateValve
     end
 
     equations
-        A.p_amb == B.p_amb;
         let
             p_diff = A.p - B.p;
-            valve_open = if cmd > {0.5, '1'}, {1, '1'} else {0, '1'} end;
+            cmd_clamped = if cmd > {1, '1'}
+                {1, '1'}
+            elseif cmd < {0, '1'}
+                {0, '1'}
+            else
+                cmd
+            end;
         in
-            n_dot == valve_open * p_diff / R_open;
+            n_dot == cmd_clamped * p_diff / R_open;
         end
     end
 

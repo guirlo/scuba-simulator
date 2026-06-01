@@ -14,7 +14,6 @@ domain underwaterGas
 
     variables
         p     = {101325, 'Pa'};        % Pressure (across)
-        p_amb = {101325, 'Pa'};        % Ambient pressure (across, propagated)
     end
 
 end

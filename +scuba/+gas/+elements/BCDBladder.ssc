@@ -7,15 +7,18 @@ component BCDBladder
 
     annotations
         Icon = 'images/BCDBladder.svg';
+        [A] : Side = top;
+        [R] : Side = right;
+        [V_bcd] : Side = right;
     end
 
     nodes
-        A = scuba.gas.underwaterGas;                   % inlet/outlet:left
-        R = foundation.translational.translational;    % mechanical:right
+        A = scuba.gas.underwaterGas;
+        R = foundation.translational.translational;
     end
 
     outputs
-        V_bcd = {0, 'm^3'};  % Current bladder volume
+        V_bcd = {0, 'm^3'};
     end
 
     parameters
@@ -62,7 +65,6 @@ component BCDBladder
             F_buoy  = rho_water * R.gravity * V_actual;
         in
             A.p     == P_amb + P_excess;
-            A.p_amb == P_amb;
             der(n_bcd) == n_dot_clamped;
             V_bcd == V_actual;
             f == -F_buoy;
