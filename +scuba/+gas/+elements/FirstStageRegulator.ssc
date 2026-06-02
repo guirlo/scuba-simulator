@@ -33,7 +33,7 @@ component FirstStageRegulator
 
     equations
         let
-            depth = if R.x > {0, 'm'}, R.x else {0, 'm'} end;
+            depth = R.x;
             P_amb = P_atm + rho_water * R.gravity * depth;
             P_set = P_amb + IP_offset;
             P_target = if A.p < P_set, A.p else P_set end;

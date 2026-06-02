@@ -5,7 +5,8 @@ component AmbientReference
 
     annotations
         Icon = 'images/AmbientReference.svg';
-        [R] : Side = top;
+        [A] : Side = top
+        [R] : Side = right;
     end
 
     nodes
@@ -30,7 +31,7 @@ component AmbientReference
 
     equations
         let
-            depth = if R.x > {0, 'm'}, R.x else {0, 'm'} end;
+            depth = R.x;
             P_amb = P_atm + rho_water * R.gravity * depth;
         in
             A.p == P_amb;

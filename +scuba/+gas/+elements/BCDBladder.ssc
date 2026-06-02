@@ -9,16 +9,11 @@ component BCDBladder
         Icon = 'images/bcd3.svg';
         [A] : Side = top;
         [R] : Side = left;
-        [V_bcd] : Side = right;
     end
 
     nodes
         A = scuba.gas.underwaterGas;
         R = foundation.translational.translational;
-    end
-
-    outputs
-        V_bcd = {0, 'm^3'};
     end
 
     parameters
@@ -32,6 +27,7 @@ component BCDBladder
     variables
         n_dot_in = {0, 'mol/s'};   % Flow into bladder
         f        = {0, 'N'};       % Buoyancy force on translational port
+        V_bcd    = {0, 'm^3'};     % BCD volume 
     end
 
     variables(Access = private)
@@ -47,7 +43,7 @@ component BCDBladder
         let
             R_gas   = A.R_gas;
             T       = A.T;
-            depth   = if R.x > {0, 'm'}, R.x else {0, 'm'} end;
+            depth   = R.x;
             P_amb   = P_atm + rho_water * R.gravity * depth;
             n_clamped = if n_bcd > {0, 'mol'}, n_bcd else {0, 'mol'} end;
             V_free  = n_clamped * R_gas * T / P_amb;

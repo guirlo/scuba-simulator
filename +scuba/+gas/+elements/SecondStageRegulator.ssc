@@ -34,7 +34,7 @@ component SecondStageRegulator
 
     equations
         let
-            depth = if R.x > {0, 'm'}, R.x else {0, 'm'} end;
+            depth = R.x;
             P_amb = P_atm + rho_water * R.gravity * depth;
             demand = P_amb - B.p;
         in

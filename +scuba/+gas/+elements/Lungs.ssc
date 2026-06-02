@@ -3,25 +3,20 @@ component Lungs
 % Variable-volume lung chamber.
 % Sets port pressure to P_amb + breath_effort.
 % Tracks moles to compute volume.
-% Gas enters from inhale port A (from regulator) and exits via exhale port B.
 
     annotations
         Icon = 'images/Lungs.svg';
-        [R] : Side = top;
+        [A] : Side = top;
+        [R] : Side = Left;
     end
 
     nodes
-        A = scuba.gas.underwaterGas;                    % inhale inlet:left
-        B = scuba.gas.underwaterGas;                    % exhale outlet:right
+        A = scuba.gas.underwaterGas;                    % gas:left
         R = foundation.translational.translational;     % position:right
     end
 
     inputs
         breath_effort = {0, 'Pa'};       % Muscular effort (+exhale, -inhale)
-    end
-
-    outputs
-        V_lungs = {1.5e-3, 'm^3'};  % Current lung volume
     end
 
     parameters
@@ -31,34 +26,33 @@ component Lungs
     end
 
     variables
-        n_dot_in  = {0, 'mol/s'};    % Flow into lungs from A
-        n_dot_out = {0, 'mol/s'};    % Flow out of lungs to B
-        f         = {0, 'N'};        % Force on translational port
+        n_dot = {0, 'mol/s'};    % Net molar flow into lungs
+        f     = {0, 'N'};        % Buoyancy force on translational port
     end
 
     variables(Access = private)
         n_lungs = {value = n_init, priority = priority.high};  % Moles in lungs (state)
+        V_lungs = {1.5e-3, 'm^3'};
     end
 
     branches
-        n_dot_in  : A.n_dot -> *;
-        n_dot_out : * -> B.n_dot;
-        f         : * -> R.f;
+        n_dot : A.n_dot -> *;
+        f     : * -> R.f;
     end
 
     equations
         let
             R_gas  = A.R_gas;
             T      = A.T;
-            depth  = if R.x > {0, 'm'}, R.x else {0, 'm'} end;
+            depth  = R.x;
             P_amb  = P_atm + rho_water * R.gravity * depth;
             P_lung = P_amb + breath_effort;
+            F_buoy = rho_water * R.gravity * V_lungs;
         in
-            f == {0, 'N'};
             A.p == P_lung;
-            B.p == P_lung;
-            der(n_lungs) == n_dot_in - n_dot_out;
+            der(n_lungs) == n_dot;
             V_lungs == n_lungs * R_gas * T / P_amb;
+            f == -F_buoy;
         end
     end
 
