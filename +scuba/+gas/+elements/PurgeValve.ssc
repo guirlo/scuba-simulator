@@ -31,20 +31,20 @@ component PurgeValve
         n_dot : A.n_dot -> B.n_dot;
     end
 
+    intermediates
+        p_drive = A.p - B.p + P_dump;
+        p_eff = if p_drive > {0, 'Pa'}, p_drive else {0, 'Pa'} end;
+        cmd_clamped = if cmd > {1, '1'}
+            {1, '1'}
+        elseif cmd < {0, '1'}
+            {0, '1'}
+        else
+            cmd
+        end;
+    end
+
     equations
-        let
-            p_drive = A.p - B.p + P_dump;
-            p_eff = if p_drive > {0, 'Pa'}, p_drive else {0, 'Pa'} end;
-            cmd_clamped = if cmd > {1, '1'}
-                {1, '1'}
-            elseif cmd < {0, '1'}
-                {0, '1'}
-            else
-                cmd
-            end;
-        in
-            n_dot == cmd_clamped * p_eff / R_open;
-        end
+        n_dot == cmd_clamped * p_eff / R_open;
     end
 
 end

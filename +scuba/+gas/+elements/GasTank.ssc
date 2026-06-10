@@ -35,15 +35,15 @@ component GasTank
         f         : * -> R.f;
     end
 
+    intermediates
+        R_gas = A.R_gas;
+        T     = A.T;
+    end
+
     equations
-        let
-            R_gas = A.R_gas;
-            T     = A.T;
-        in
-            A.p == n_tank * R_gas * T / V_tank;
-            der(n_tank) == -n_dot_out;
-            f == n_tank * M_gas * R.gravity;
-        end
+        A.p == n_tank * R_gas * T / V_tank;
+        der(n_tank) == -n_dot_out;
+        f == n_tank * M_gas * R.gravity;
     end
 
 end

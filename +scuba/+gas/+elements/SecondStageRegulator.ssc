@@ -32,19 +32,19 @@ component SecondStageRegulator
         f     : * -> R.f;
     end
 
+    intermediates
+        depth = R.x;
+        P_amb = P_atm + rho_water * R.gravity * depth;
+        demand = P_amb - B.p;
+    end
+
     equations
-        let
-            depth = R.x;
-            P_amb = P_atm + rho_water * R.gravity * depth;
-            demand = P_amb - B.p;
-        in
-            f == {0, 'N'};
-            n_dot == if demand > P_crack
-                (demand - P_crack) / R_open
-            else
-                {0, 'mol/s'}
-            end;
-        end
+        f == {0, 'N'};
+        n_dot == if demand > P_crack
+            (demand - P_crack) / R_open
+        else
+            {0, 'mol/s'}
+        end;
     end
 
 end

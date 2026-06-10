@@ -29,14 +29,14 @@ component AmbientReference
         f        : * -> R.f;
     end
 
+    intermediates
+        depth = R.x;
+        P_amb = P_atm + rho_water * R.gravity * depth;
+    end
+
     equations
-        let
-            depth = R.x;
-            P_amb = P_atm + rho_water * R.gravity * depth;
-        in
-            A.p == P_amb;
-            f == {0, 'N'};
-        end
+        A.p == P_amb;
+        f == {0, 'N'};
     end
 
 end

@@ -29,14 +29,14 @@ component GasVolume
         n_dot_in : A.n_dot -> *;
     end
 
+    intermediates
+        R_gas = A.R_gas;
+        T     = A.T;
+    end
+
     equations
-        let
-            R_gas = A.R_gas;
-            T     = A.T;
-        in
-            A.p == n_gas * R_gas * T / V;
-            der(n_gas) == n_dot_in;
-        end
+        A.p == n_gas * R_gas * T / V;
+        der(n_gas) == n_dot_in;
     end
 
 end

@@ -36,15 +36,15 @@ component BuoyancyForceSource
         f : * -> R.f;
     end
 
+    intermediates
+        V_wetsuit = V_ws_surface * (P_atm / P_amb)^compression_exp;
+        V_total = V_body + V_gear + V_wetsuit + V_bcd + V_lungs;
+        F_buoy = rho_water * g * V_total;
+        F_weight = m_total * g;
+    end
+
     equations
-        let
-            V_wetsuit = V_ws_surface * (P_atm / P_amb)^compression_exp;
-            V_total = V_body + V_gear + V_wetsuit + V_bcd + V_lungs;
-            F_buoy = rho_water * g * V_total;
-            F_weight = m_total * g;
-        in
-            f == F_weight - F_buoy;
-        end
+        f == F_weight - F_buoy;
     end
 
 end

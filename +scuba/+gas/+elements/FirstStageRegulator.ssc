@@ -31,21 +31,21 @@ component FirstStageRegulator
         f     : * -> R.f;
     end
 
+    intermediates
+        depth = R.x;
+        P_amb = P_atm + rho_water * R.gravity * depth;
+        P_set = P_amb + IP_offset;
+        P_target = if A.p < P_set, A.p else P_set end;
+        p_err = P_target - B.p;
+    end
+
     equations
-        let
-            depth = R.x;
-            P_amb = P_atm + rho_water * R.gravity * depth;
-            P_set = P_amb + IP_offset;
-            P_target = if A.p < P_set, A.p else P_set end;
-            p_err = P_target - B.p;
-        in
-            f == {0, 'N'};
-            n_dot == if p_err > {0, 'Pa'}
-                p_err / R_open
-            else
-                {0, 'mol/s'}
-            end;
-        end
+        f == {0, 'N'};
+        n_dot == if p_err > {0, 'Pa'}
+            p_err / R_open
+        else
+            {0, 'mol/s'}
+        end;
     end
 
 end

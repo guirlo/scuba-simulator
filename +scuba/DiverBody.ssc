@@ -28,14 +28,14 @@ component DiverBody
         f : R.f -> *;
     end
 
+    intermediates
+        mass   = rho_body * V_body;
+        F_buoy = rho_water * R.gravity * V_body;
+        F_drag = {0.5, '1'} * rho_water * Cd * A_frontal * R.v * abs(R.v);
+    end
+
     equations
-        let
-            mass   = rho_body * V_body;
-            F_buoy = rho_water * R.gravity * V_body;
-            F_drag = {0.5, '1'} * rho_water * Cd * A_frontal * R.v * abs(R.v);
-        in
-            f == mass * der(R.v) - mass * R.gravity + F_buoy + F_drag;
-        end
+        f == mass * der(R.v) - mass * R.gravity + F_buoy + F_drag;
     end
 
 end

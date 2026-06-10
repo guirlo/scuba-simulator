@@ -24,12 +24,12 @@ component HydrodynamicDrag
         f : R.f -> *;
     end
 
+    intermediates
+        v = R.v;
+    end
+
     equations
-        let
-            v = R.v;
-        in
-            f == {0.5, '1'} * rho_water * Cd * A_frontal * v * abs(v);
-        end
+        f == {0.5, '1'} * rho_water * Cd * A_frontal * v * abs(v);
     end
 
 end

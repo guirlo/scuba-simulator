@@ -40,20 +40,20 @@ component Lungs
         f     : * -> R.f;
     end
 
+    intermediates
+        R_gas  = A.R_gas;
+        T      = A.T;
+        depth  = R.x;
+        P_amb  = P_atm + rho_water * R.gravity * depth;
+        P_lung = P_amb + breath_effort;
+        F_buoy = rho_water * R.gravity * V_lungs;
+    end
+
     equations
-        let
-            R_gas  = A.R_gas;
-            T      = A.T;
-            depth  = R.x;
-            P_amb  = P_atm + rho_water * R.gravity * depth;
-            P_lung = P_amb + breath_effort;
-            F_buoy = rho_water * R.gravity * V_lungs;
-        in
-            A.p == P_lung;
-            der(n_lungs) == n_dot;
-            V_lungs == n_lungs * R_gas * T / P_amb;
-            f == -F_buoy;
-        end
+        A.p == P_lung;
+        der(n_lungs) == n_dot;
+        V_lungs == n_lungs * R_gas * T / P_amb;
+        f == -F_buoy;
     end
 
 end

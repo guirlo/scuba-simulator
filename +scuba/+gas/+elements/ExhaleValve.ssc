@@ -25,16 +25,16 @@ component ExhaleValve
         n_dot : A.n_dot -> B.n_dot;
     end
 
+    intermediates
+        p_diff = A.p - B.p;
+    end
+
     equations
-        let
-            p_diff = A.p - B.p;
-        in
-            n_dot == if p_diff > P_crack
-                (p_diff - P_crack) / R_open
-            else
-                {0, 'mol/s'}
-            end;
-        end
+        n_dot == if p_diff > P_crack
+            (p_diff - P_crack) / R_open
+        else
+            {0, 'mol/s'}
+        end;
     end
 
 end
