@@ -13,8 +13,8 @@ MATLAB R2026a. Requires Simulink, Simscape, Stateflow.
 All commands run in MATLAB (use MCP matlab tools or `! matlab -batch "..."` for CLI):
 
 - **Build Simscape library** (after any `.ssc` change): `sscbuild('scuba','-output','models')`
-- **Load workspace parameters**: `startup` (also runs on project open)
-- **Run harness simulation**: open `bcd_buoyancy_with_tank_harness.slx` and click Play
+- **Load workspace parameters**: `initWorkspace` (also runs on project open)
+- **Run harness simulation**: open `models/descent_test.slx` and click Play
 - **Run open-loop simulation**: `run('scripts/run_simulation.m')`
 - **Plot results**: `plot_results(out)`
 
@@ -35,7 +35,7 @@ All commands run in MATLAB (use MCP matlab tools or `! matlab -batch "..."` for 
 - Domain parameters: R_gas, T (isothermal assumption)
 - P_amb is computed locally by each component from translational port position (`R.x`)
 
-### Primary Model (`bcd_buoyancy_with_tank_harness.slx`)
+### Primary Model (`models/descent_test.slx`)
 
 Test harness that wraps the `Plant` subsystem (also saved as `models/Scuba_Diver.slx`):
 ```
@@ -61,7 +61,7 @@ Same content as `Plant` subsystem: 3 inports (Inflate BCD, Purge BCD, Breath), 2
 
 ### Parameter Flow
 
-`parameters/scuba_params.m` (single source of truth) → `scripts/load_plant_params.m` (flattens struct into named workspace variables) → `startup.m` calls both on project open.
+`parameters/scuba_params.m` (single source of truth) → `scripts/load_plant_params.m` (flattens struct into named workspace variables) → `scripts/initWorkspace.m` calls both on project open.
 
 ## Key Design Decisions
 
@@ -89,8 +89,7 @@ Same content as `Plant` subsystem: 3 inports (Inflate BCD, Purge BCD, Breath), 2
   - `+gas/branch.ssc` — unused base class (candidate for removal)
   - `+gas/+elements/` — gas components (14 files, 2 unused: IdealMolarFlowSource, IdealPressureSource)
   - `DiverBody.ssc` — combined mass/buoyancy/drag
-- `models/` — `Scuba_Diver.slx` (plant), `scuba_lib.slx` (compiled library)
+- `models/` — `descent_test.slx` (harness), `Scuba_Diver.slx` (plant), `scuba_lib.slx` (compiled library)
 - `parameters/` — `scuba_params.m` (master), `gas_properties.m`, `diver_configs.m`
 - `scripts/` — `rebuildScubaLib.m`, `run_simulation.m`, `plot_results.m`, `load_plant_params.m`, etc.
-- `bcd_buoyancy_with_tank_harness.slx` — primary test harness (root level)
 - `scuba-buyancy.prj` — MATLAB project file

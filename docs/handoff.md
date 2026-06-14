@@ -4,7 +4,7 @@
 **Project:** scuba-buoyancy  
 **Location:** `L:\Projects\scuba`  
 **MATLAB version:** R2026a  
-**Status:** Major refactor complete. Architecture simplified: DiverBody replaces 3 separate mechanical components; P_amb computed locally per component (no domain-level propagation); Lungs/BCD/GasTank have translational ports with direct force output. Old top-level model (`scuba_buoyancy_sim.slx`) and test suite removed. New primary model is `bcd_buoyancy_with_tank_harness.slx` with Stateflow depth controller.
+**Status:** Major refactor complete. Architecture simplified: DiverBody replaces 3 separate mechanical components; P_amb computed locally per component (no domain-level propagation); Lungs/BCD/GasTank have translational ports with direct force output. Old top-level model (`scuba_buoyancy_sim.slx`) and test suite removed. New primary model is `descent_test.slx` with Stateflow depth controller.
 
 ---
 
@@ -69,7 +69,7 @@ The project underwent a major simplification from the original multi-phase imple
 
 ### Current Model State
 
-The harness (`bcd_buoyancy_with_tank_harness.slx`) runs successfully with:
+The harness (`descent_test.slx`) runs successfully with:
 - Stateflow chart commanding descent to target depth, BCD inflation to achieve neutral buoyancy, then hold
 - Full gas circuit: Tank → 1st Stage → Hose Volume → 2nd Stage → Lungs → Exhale → Ambient, with BCD branch (InflateValve → OPRV → PurgeValve → Bladder)
 - Mechanical: DiverBody + Weights + hard stops + Initial Depth + MotionSensor
@@ -99,7 +99,7 @@ The harness (`bcd_buoyancy_with_tank_harness.slx`) runs successfully with:
 | File | Purpose |
 |------|---------|
 | `scuba-buyancy.prj` | MATLAB Project file |
-| `startup.m` | Loads params into workspace on project open |
+| `scripts/initWorkspace.m` | Loads params into workspace on project open |
 | `.gitignore` | Excludes slprj/, *.slxc, *.mex*, codegen/, *.autosave |
 | `.gitattributes` | Git LFS / line-ending config |
 
@@ -133,11 +133,11 @@ The harness (`bcd_buoyancy_with_tank_harness.slx`) runs successfully with:
 ### Models
 | File | Purpose |
 |------|---------|
-| `bcd_buoyancy_with_tank_harness.slx` | Primary test harness (Stateflow controller + Plant) |
+| `descent_test.slx` | Primary test harness (Stateflow controller + Plant) |
 | `models/Scuba_Diver.slx` | Reusable plant (3 in, 2 out) — same as Plant subsystem |
 | `models/scuba_lib.slx` | Compiled Simscape library (output of `sscbuild`) |
 
-#### Model Hierarchy (`bcd_buoyancy_with_tank_harness.slx`)
+#### Model Hierarchy (`descent_test.slx`)
 ```
 root
 ├── Desired Depth (Constant = 15)
@@ -249,7 +249,7 @@ None. Harness model runs successfully with Stateflow depth controller.
 ## Next Steps
 
 1. **Remove unused components** — delete `branch.ssc`, `IdealMolarFlowSource.ssc`, `IdealPressureSource.ssc` and corresponding SVGs
-2. **Rewrite test suite** — target `bcd_buoyancy_with_tank_harness.slx` / `Scuba_Diver.slx`
+2. **Rewrite test suite** — target `descent_test.slx` / `Scuba_Diver.slx`
 3. **Add wetsuit compression** — either in DiverBody or as separate component
 4. **Improve depth controller** — current Stateflow is minimal (drop → float → done); add proper depth-following
 5. **Update legacy scripts** — `run_simulation.m`, `run_full_dive.m` for new model
@@ -259,11 +259,11 @@ None. Harness model runs successfully with Stateflow depth controller.
 
 ## How to Continue
 
-1. Open MATLAB project: `openProject('L:\Projects\scuba')` or double-click `scuba-buyancy.prj` — `startup.m` auto-loads params and plant variables
+1. Open MATLAB project: `openProject('L:\Projects\scuba')` or double-click `scuba-buyancy.prj` — `scripts/initWorkspace.m` auto-loads params and plant variables
 2. Build the library: `run('scripts/rebuildScubaLib.m')` — compiles `.ssc` files into `models/scuba_lib.slx`
-3. Open the harness: `open_system('bcd_buoyancy_with_tank_harness')`
+3. Open the harness: `open_system('descent_test')`
 4. Click Play — Stateflow controller descends to target depth (15m default), inflates BCD, holds
-5. If you get "undefined variable" errors, run `startup` to reload workspace variables
+5. If you get "undefined variable" errors, run `initWorkspace` to reload workspace variables
 6. Modify target depth: change the "Desired Depth" constant block
 7. Open `models/Scuba_Diver.slx` to use the plant standalone (provide inflate, purge, breath inputs)
 

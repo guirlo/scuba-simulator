@@ -1,5 +1,4 @@
-% Project startup script
-% Loads parameters into base workspace for Simulink model access
+% initWorkspace - Load parameters into base workspace for Simulink model access
 
 % Add project root to path so Simscape resolves the +scuba domain package
 

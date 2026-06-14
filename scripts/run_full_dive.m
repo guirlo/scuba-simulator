@@ -1,5 +1,5 @@
 % Run a full 36-minute dive profile simulation.
-% Requires project to be open (startup.m loads params).
+% Requires project to be open (initWorkspace.m loads params).
 %
 % Profile: 1m -> 30m descent -> 20 min bottom -> stepped ascent (5m increments)
 % -> 3 min safety stop at 5m -> surface at 1m.
