@@ -213,6 +213,7 @@
 |--------|--------|------------------------|
 | Descent rate | 0.3–0.5 m/s | Controlled comfortable descent (US Navy: max 23 m/min) |
 | Bottom depth RMS error | < 0.3 m | Comfortable neutral buoyancy for recreational diver |
+| BCD activity during hold | BCD commands = 0 for >90% of hold time | Real divers use breath, not BCD, for fine trim |
 | Max ascent rate | ≤ 0.167 m/s (10 m/min) | Modern standard (US Navy Rev 7, PADI) |
 | Safety stop depth error | < ±0.5 m from 5m | Must stay at stop depth |
 | SAC rate (derived) | 12–20 L/min surface equivalent | Buzzacott 2014 range for relaxed swimming |
@@ -233,7 +234,8 @@
 
 | Metric | Target | Physical Justification |
 |--------|--------|------------------------|
-| Level transition time | < 90s to stabilize at new depth | BCD adjustment time |
+| Level transition time | < 90s to stabilize at new depth | BCD adjustment + breath-trim settling |
+| BCD adjustment at each level | Single inflate/purge burst, then idle | Real diver: set BCD once per depth, breathe to hold |
 | Depth overshoot at each level | < 1.0 m | Acceptable for recreational diving |
 | Max ascent rate between levels | ≤ 0.167 m/s | Safety standard |
 | Gas consumption at 30m vs 10m | ~3:2 ratio | Proportional to absolute pressure |
@@ -272,6 +274,7 @@
 | Metric | Target | Physical Justification |
 |--------|--------|------------------------|
 | Depth stability over 55 min | < ±0.3m, no drift | Long-term stability test |
+| BCD activity during hold | Zero BCD commands for entire 55-min hold | Breath-only control at constant depth |
 | SAC rate | 10–15 L/min surface equivalent | Low activity tropical dive |
 | Tank end pressure | > 80 bar (plenty of gas at 10m) | Shallow = low consumption |
 | Simulation time (wall-clock) | < 5 min | Performance requirement |

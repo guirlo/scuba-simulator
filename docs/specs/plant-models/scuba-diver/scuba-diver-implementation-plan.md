@@ -116,39 +116,68 @@ full_dive_test.slx (root)
 
 ---
 
-### Phase 1: Breathing Generator Subsystem
-**Goal:** Create a reusable subsystem that generates realistic breath_effort signal  
-**Duration:** 2 hours
+### Phase 1: Breathing Generator with Depth Trim
+**Goal:** Create a subsystem that generates realistic breath_effort with biased breathing for fine depth control  
+**Duration:** 3 hours
 
 | Step | Operation | Details |
 |------|-----------|---------|
-| 1.1 | Design waveform | Sinusoidal: `effort = -A × sin(2π × f × t)` where f = rate/60, A = 200 Pa |
-| 1.2 | Add asymmetry option | Optional: inhale faster than exhale (duty cycle 40/60 split) |
-| 1.3 | Add depth scaling | Work of breathing increases with gas density: A_eff = A × (1 + depth/40) |
-| 1.4 | Parameterize | Inputs: breathing_rate [bpm], amplitude [Pa], depth [m] |
-| 1.5 | Build subsystem | Simulink subsystem with Clock → sin function → Gain → output |
-| 1.6 | Test standalone | Drive with constant depth, verify waveform shape and frequency |
+| 1.1 | Design base waveform | Sinusoidal: `effort = -A × sin(2π × f × t)` where f = rate/60, A = 200 Pa |
+| 1.2 | Add depth scaling | Work of breathing increases with gas density: A_eff = A × (1 + depth/40) |
+| 1.3 | Add breath-trim bias | Asymmetric inhale/exhale to control lung volume for fine buoyancy adjustment |
+| 1.4 | Implement duty-cycle shift | Bias toward longer inhale (fuller lungs → more buoyant) or longer exhale (emptier lungs → less buoyant) |
+| 1.5 | Implement amplitude asymmetry | Deeper inhale or deeper exhale to shift mean lung volume |
+| 1.6 | Parameterize | Inputs: breathing_rate [bpm], amplitude [Pa], depth [m], depth_error [m], velocity [m/s] |
+| 1.7 | Build subsystem | Simulink subsystem with oscillator + bias logic |
+| 1.8 | Test standalone | Verify waveform shape, frequency, and mean lung volume shift with bias |
 
 **Waveform specification:**
 
 ```
-breath_effort(t) = -A_base × (1 + depth/40) × sin(2π × (rate/60) × t)
+Base oscillator:
+  breath_effort(t) = -A_eff × sin(2π × f × t + phase_bias)
+  A_eff = A_base × (1 + depth/40)  (gas density scaling)
 
-Where:
+Depth trim via breathing bias:
+  When diver is slightly too deep (depth_error > deadzone):
+    - Bias toward fuller lungs: longer/deeper inhale, shorter exhale
+    - Mean lung volume increases → net buoyancy increases → diver rises
+  When diver is slightly too shallow (depth_error < -deadzone):
+    - Bias toward emptier lungs: shorter inhale, longer/deeper exhale
+    - Mean lung volume decreases → net buoyancy decreases → diver sinks
+
+Bias mechanisms (combined):
+  1. Duty-cycle shift: inhale_fraction = 0.5 + duty_shift × bias
+     (bias in [-1, 1] from depth error with deadzone and saturation)
+  2. Amplitude asymmetry: inhale_amp = A × (1 + amp_gain × bias)
+                          exhale_amp = A × (1 - amp_gain × bias)
+
+Bias computation:
+  raw_error = depth - depth_target
+  vel_term = K_vel × velocity
+  bias_input = raw_error + vel_term
+  bias = deadzone_then_saturate(bias_input, deadzone=0.3m, saturation=1.5m)
+
+Parameters:
   A_base = 200 Pa (peak muscular pressure, Held & Pendergast 2013)
   rate = 15 bpm (default)
-  depth = current depth from plant output [m]
-  
-Negative half-cycle = inhale (creates suction, opens 2nd stage)
-Positive half-cycle = exhale (creates pressure, opens exhale valve)
+  deadzone = 0.3 m (no bias below this error)
+  saturation = 1.5 m (bias saturates at ±1 beyond this)
+  K_vel = 0.8 s/m (velocity damping)
+  duty_shift_max = 0.10 (fraction of cycle shifted)
+  amp_gain = 0.3 (±30% asymmetry at full bias)
 ```
+
+**Physical basis:** Real divers maintain neutral buoyancy at a constant depth primarily through breath control — inhaling deeper to rise slightly, exhaling more to sink slightly. The BCD is only adjusted for large depth changes or to compensate for wetsuit compression. The ~0.5L tidal volume provides approximately ±0.5 kgf of buoyancy modulation, sufficient for ±0.3m corrections.
 
 **Verification:**
 - At surface (depth=0): peak effort = ±200 Pa, frequency = 0.25 Hz
 - At 30m: peak effort = ±350 Pa (depth scaling active)
+- With +0.5m depth error: mean lung volume visibly higher than neutral (bias active)
+- With zero error: symmetric breathing (no bias)
 - 2nd stage opens during negative half-cycle (verified in plant)
 
-**Checkpoint 1:** Breathing subsystem produces correct waveform; plant responds with gas flow.
+**Checkpoint 1:** Breathing subsystem produces correct waveform with active depth trim; plant responds with gas flow and subtle buoyancy changes.
 
 ---
 
@@ -192,57 +221,63 @@ SURFACE (t < t_start)
 
 ---
 
-### Phase 2b: BCD Controller
-**Goal:** Controller that manages inflate/purge to track depth_target  
+### Phase 2b: BCD Controller (Large Maneuvers Only)
+**Goal:** Controller that manages inflate/purge for descent, ascent, and level changes — NOT for fine depth hold  
 **Duration:** 3 hours
 
 | Step | Operation | Details |
 |------|-----------|---------|
-| 2b.1 | Define control law | Proportional + rate-limited BCD commands based on depth error and velocity |
-| 2b.2 | Phase-dependent gains | Different behavior for descent (allow sink), hold (tight), ascent (vent) |
+| 2b.1 | Define control law | BCD fires only for large depth errors or phase transitions; breathing handles the rest |
+| 2b.2 | Phase-dependent behavior | Descent: gravity + brake; Hold: BCD only if breath-trim saturated; Ascent: vent Boyle expansion |
 | 2b.3 | Implement in Stateflow or MATLAB Function | Inputs: depth, vel, depth_target, phase → Outputs: inflate_cmd, purge_cmd |
 | 2b.4 | Add safety overrides | Max ascent rate limiter: force purge if ascending > 10 m/min |
 | 2b.5 | Anti-windup | Don't continuously inflate when at surface (depth < 2m) |
-| 2b.6 | Tune gains | Iterate until Scenario 1 shows < ±0.5m depth error in hold |
+| 2b.6 | Tune gains | Iterate until BCD fires rarely during hold; breathing does the fine work |
 
 **Control law design:**
 
 ```
 depth_error = depth_target - depth  (positive = too shallow, need to descend)
-vel_error = desired_vel - vel       (desired_vel from depth_target derivative)
 
 DESCENT phase:
-  inflate_cmd = 0 (let gravity pull down)
+  inflate_cmd = 0 (let gravity pull down, diver is negatively buoyant)
   purge_cmd = 0
   If vel > max_descent_rate: inflate_cmd = K_brake × (vel - max_descent_rate)
+  Near target depth (within 2m): inflate BCD toward neutral buoyancy for that depth
 
 HOLD phase:
-  If depth_error > deadband:   inflate_cmd = 0; purge_cmd = K_p × depth_error
-  If depth_error < -deadband:  inflate_cmd = K_p × |depth_error|; purge_cmd = 0
-  If |depth_error| < deadband: inflate_cmd = 0; purge_cmd = 0
-  Velocity damping: purge_cmd += K_d × max(0, -vel)  (if rising, vent a bit)
-                    inflate_cmd += K_d × max(0, vel)   (if sinking, inflate a bit)
+  Primary control: breathing trim (Phase 1 handles ±0.3m via lung volume bias)
+  BCD intervenes ONLY when depth error exceeds bcd_deadband (default 2.0m):
+    If depth_error > bcd_deadband:  purge_cmd = K_p × (depth_error - bcd_deadband)
+    If depth_error < -bcd_deadband: inflate_cmd = K_p × (|depth_error| - bcd_deadband)
+    Otherwise: inflate_cmd = 0; purge_cmd = 0 (let breathing handle it)
+  This models real diver behavior: BCD is set-and-forget at a given depth.
 
 ASCEND phase:
-  purge_cmd = K_ascent × max(0, P_boyle_expansion_rate)  (preemptive venting)
+  purge_cmd = K_ascent × max(0, Boyle_expansion_rate)  (preemptive venting)
   If |vel| > max_ascent_rate: purge_cmd = 1.0 (emergency vent)
   inflate_cmd = 0
+  Between levels (multi-level profile): re-establish neutral BCD at new depth
 
 SAFETY_STOP phase:
-  Same as HOLD but tighter deadband (0.2m)
+  One-time BCD adjustment to neutral at 5m
+  Then breathing-only for fine hold (same as HOLD with tight deadband)
 
 Parameters:
-  K_p = 2.0 (1/m) — proportional gain
-  K_d = 5.0 (s/m) — velocity damping
+  K_p = 2.0 (1/m) — proportional gain (BCD, large errors only)
   K_brake = 10.0 (s/m) — descent rate braking
   K_ascent = 0.5 — ascent vent gain
-  deadband = 0.3 m — depth error tolerance
+  bcd_deadband = 2.0 m — BCD only fires beyond this depth error
   max_descent_rate = 0.5 m/s
   max_ascent_rate = 0.167 m/s (10 m/min)
 ```
 
+**Physical basis:** Real divers set the BCD once at each depth to achieve approximate neutral buoyancy, then use breath control for fine adjustments (±0.3m). The BCD is only actively used during descent (to slow down and establish neutral), ascent (to vent expanding gas), and level changes (to re-establish neutral at a new depth). During a steady hold at constant depth, BCD commands should be rare — the breathing trim handles small perturbations through lung volume modulation (~0.5L tidal volume ≈ ±0.5 kgf buoyancy).
+
 **Verification:**
-- In HOLD at 20m: depth oscillation < ±0.5m
+- In HOLD at 20m: BCD commands are zero or near-zero for >90% of hold time
+- Breathing trim maintains depth within ±0.5m during hold
+- BCD fires only during descent, ascent, or if perturbation exceeds 2m
 - During ASCENT: velocity never exceeds 0.167 m/s for more than 2s
 - During DESCENT: velocity stays below 0.5 m/s
 - No chattering (inflate and purge not simultaneously active)
@@ -337,9 +372,13 @@ Parameters:
 | Breathing rate | f_breath | 15 | bpm | Buzzacott 2014 (relaxed) | BreathingGen |
 | Breath amplitude | A_breath | 200 | Pa | Held & Pendergast 2013 | BreathingGen |
 | Depth effort scaling | K_depth | 1/40 | 1/m | Approx. gas density effect | BreathingGen |
-| BCD proportional gain | K_p | 2.0 | 1/m | Tuned | BCDController |
-| BCD velocity damping | K_d | 5.0 | s/m | Tuned | BCDController |
-| BCD deadband | db | 0.3 | m | From scuba_params | BCDController |
+| Breath trim deadzone | bc_deadzone | 0.3 | m | No bias below this error | BreathingGen |
+| Breath trim saturation | bc_saturation | 1.5 | m | Bias saturates at ±1 | BreathingGen |
+| Breath velocity damping | bc_K_vel | 0.8 | s/m | Velocity damping gain | BreathingGen |
+| Duty-cycle shift max | bc_duty_shift | 0.10 | — | Fraction of cycle shifted | BreathingGen |
+| Amplitude asymmetry gain | bc_amp_gain | 0.3 | — | ±30% at full bias | BreathingGen |
+| BCD deadband | bcd_deadband | 2.0 | m | BCD only fires beyond this | BCDController |
+| BCD proportional gain | K_p | 2.0 | 1/m | Tuned (large errors only) | BCDController |
 | Max descent rate | v_desc_max | 0.5 | m/s | US Navy (30 m/min limit) | BCDController |
 | Max ascent rate | v_asc_max | 0.167 | m/s | US Navy (10 m/min modern) | BCDController |
 | Safety stop depth | d_safety | 5 | m | PADI/SSI standard | DiveProfile |
@@ -369,11 +408,14 @@ After each phase:
 ### Phase 1 Complete
 - [ ] Breathing subsystem generates correct frequency and amplitude
 - [ ] Depth scaling active and reasonable
+- [ ] Breath-trim bias shifts mean lung volume in response to depth error
 - [ ] Plant responds to breathing (gas flows in/out of lungs)
+- [ ] Biased breathing alone holds depth within ±0.5m (no BCD)
 
 ### Phase 2 Complete
 - [ ] Dive profile sequences through all phases correctly
-- [ ] BCD controller achieves < ±0.5m error during hold
+- [ ] BCD controller fires only for large maneuvers (>2m error) or phase transitions
+- [ ] During hold: BCD idle >90% of time, breathing trim maintains depth
 - [ ] Ascent rate limited to 10 m/min
 - [ ] No simultaneous inflate + purge commands
 

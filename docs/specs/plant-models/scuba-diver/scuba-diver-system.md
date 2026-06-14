@@ -85,7 +85,7 @@ Building the plant model and harnesses enables:
 5. Safety stop at 5m for 3 minutes
 6. Final ascent to surface at 3 m/min (0.05 m/s)
 
-**Controller Behavior:** Inflate BCD during descent to achieve neutral buoyancy; periodic small purge/inflate corrections during bottom time; continuous venting during ascent to counteract Boyle expansion.
+**Controller Behavior:** BCD inflated during descent to establish neutral buoyancy at target depth; during bottom time, breathing trim handles fine depth-keeping (BCD idle); continuous BCD venting during ascent to counteract Boyle expansion.
 
 ### Scenario 2: Multi-Level Profile (30m → 20m → 10m)
 
@@ -99,7 +99,7 @@ Building the plant model and harnesses enables:
 5. Ascent to 5m, 3-min safety stop
 6. Surface at 3 m/min
 
-**Controller Behavior:** At each level change, BCD must adapt to new ambient pressure. Gas consumption is higher at 30m (4 ATA) than at 10m (2 ATA).
+**Controller Behavior:** BCD adjusted at each level change to re-establish neutral buoyancy at new ambient pressure. Between adjustments, breathing trim maintains depth. Gas consumption is higher at 30m (4 ATA) than at 10m (2 ATA).
 
 ### Scenario 3: Deep Bounce (40m, 5 min bottom)
 
@@ -113,7 +113,7 @@ Building the plant model and harnesses enables:
 5. Ascent to 5m at 9 m/min, 3-min safety stop
 6. Surface
 
-**Controller Behavior:** Large BCD volume changes between 40m and surface. Tests OPRV behavior if venting is too slow. High gas consumption at depth.
+**Controller Behavior:** Large BCD volume changes between 40m and surface. BCD actively managed during ascent (vent Boyle expansion); breathing trim during short bottom hold. Tests OPRV behavior if venting is too slow. High gas consumption at depth.
 
 ### Scenario 4: Relaxed Shallow Dive (10m, 60 min)
 
@@ -125,7 +125,7 @@ Building the plant model and harnesses enables:
 3. Direct ascent to 5m at 9 m/min, 3-min safety stop
 4. Surface
 
-**Controller Behavior:** Minimal BCD adjustments. Tests long-duration stability and gas endurance.
+**Controller Behavior:** BCD set once at 10m for neutral buoyancy, then idle for entire bottom time. Breathing trim alone maintains depth for 55 minutes. Tests long-duration stability of breath-only control and gas endurance.
 
 ---
 
