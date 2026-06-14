@@ -12,14 +12,11 @@ MATLAB R2026a. Requires Simulink, Simscape, Stateflow.
 
 All commands run in MATLAB (use MCP matlab tools or `! matlab -batch "..."` for CLI):
 
-- **Build Simscape library** (after any `.ssc` change): `sscbuild('scuba')` or `run('scripts/build_library.m')`
+- **Build Simscape library** (after any `.ssc` change): `sscbuild('scuba','-output','models')`
 - **Load workspace parameters**: `startup` (also runs on project open)
-- **Run full 36-min dive**: `run('scripts/run_full_dive.m')`
+- **Run harness simulation**: open `bcd_buoyancy_with_tank_harness.slx` and click Play
 - **Run open-loop simulation**: `run('scripts/run_simulation.m')`
-- **Run all tests**: `results = runtests('tests');`
-- **Run a single test class**: `runtests('tests/tBCDInflateDeflate.m')`
-- **Run a single test method**: `runtests('tests/tBCDInflateDeflate', 'ProcedureName', 'inflateIncreasesVolume')`
-- **Plot results**: `plot_dive_results(out, ds)` or `plot_results(out)`
+- **Plot results**: `plot_results(out)`
 
 ## Architecture
 
@@ -29,64 +26,71 @@ All commands run in MATLAB (use MCP matlab tools or `! matlab -batch "..."` for 
 |-------|-----------|------|
 | Plant — Gas | Custom Simscape domain (`+scuba/+gas/`) | Physical gas flow: tank, regulators, lungs, BCD, valves |
 | Plant — Mechanical | Simscape Translational (position-based, β=90°) | 1-DOF vertical motion, buoyancy, drag |
-| Control | Simulink + Stateflow | Breathing state machine, BCD commands, depth controller |
+| Control | Stateflow chart | Depth controller commands inflate/purge/breath |
 
 ### Custom Gas Domain (`+scuba/+gas/underwaterGas.ssc`)
 
 - Across variable: pressure (Pa)
 - Through variable: molar flow rate (mol/s)
 - Domain parameters: R_gas, T (isothermal assumption)
-- P_amb propagates through domain connections — only AmbientReference injects it
+- P_amb is computed locally by each component from translational port position (`R.x`)
 
-### Top-Level Model (`models/scuba_buoyancy_sim.slx`)
+### Primary Model (`bcd_buoyancy_with_tank_harness.slx`)
 
+Test harness that wraps the `Plant` subsystem (also saved as `models/Scuba_Diver.slx`):
 ```
 root
-├── Inports: breathing_rate, breath_depth, inflate_btn, purge_btn, depth_target, auto_depth
-├── Controllers/     — BreathingController (Stateflow), BCDController (Stateflow),
-│                      DepthController (MATLAB Function), mode switches
-├── GasCircuit/      — Tank, regulators, lungs, BCD, valves, Solver
-└── Mechanics/       — DiverMass, BuoyancyForce, HydroDrag, AmbientPressure
+├── Desired Depth (Constant)
+├── Chart (Stateflow) — depth controller outputting inflateBCD, purgeBCD, Breath
+├── Plant/
+│   ├── Gas Tank, First Stage Regulator, Hose Volume (GasVolume)
+│   ├── Regulator/ — SecondStageReg, Lungs, ExhaleValve
+│   ├── BCD/ — InflateValve, OPRV, PurgeValve, BCD Bladder
+│   ├── AmbientRef — pressure sink at depth
+│   ├── Diver Body — combined mass + buoyancy + drag
+│   ├── Weights (Mass PB), Surface and Bottom (hard stops)
+│   ├── Initial Depth, MechProps, Translational World
+│   └── MotionSensor → depth, vel outputs
+├── Stop Simulation (depth < 0.1 or > 45)
+└── Scopes (Depth, Vel, BCD commands)
 ```
+
+### Reusable Plant (`models/Scuba_Diver.slx`)
+
+Same content as `Plant` subsystem: 3 inports (Inflate BCD, Purge BCD, Breath), 2 outports (depth, vel). Can be used as a Model Reference or standalone.
 
 ### Parameter Flow
 
-`parameters/scuba_params.m` (single source of truth) → `scripts/load_plant_params.m` (flattens struct into named workspace variables like `tank_V`, `reg1_IP_offset`) → Simscape block dialogs reference these variable names.
+`parameters/scuba_params.m` (single source of truth) → `scripts/load_plant_params.m` (flattens struct into named workspace variables) → `startup.m` calls both on project open.
 
 ## Key Design Decisions
 
 - Gas flow is driven by **pressure differentials**, not command signals. The 2nd stage regulator opens physically when breathing effort creates suction.
-- **No deprecated `function setup`** in Simscape — uses `{value = param, priority = priority.high}` for state init and inline node declaration for domain param propagation.
-- **Depth controller is bang-bang with deadband** (not PID) because the plant is fundamentally unstable (Boyle expansion positive feedback) and valve actuation is binary.
-- **Two-tier depth control**: breathing inner loop (duty cycle shift ±10%, amplitude asymmetry ±30%) for fine trim; BCD outer loop fires only beyond ±2m error.
-- **Memory blocks** break algebraic loops on depth/velocity feedback.
-- **Weight integrated into BuoyancyForceSource** — no separate gravity block.
+- **No deprecated `function setup`** in Simscape — uses `{value = param, priority = priority.high}` for state init, `intermediates` for derived quantities.
+- **P_amb computed locally** — each component that needs ambient pressure has a translational port (`R`) and computes `P_amb = P_atm + rho_water * R.gravity * R.x`. No domain-level `p_amb` variable.
+- **DiverBody** — single component combining mass, Archimedes buoyancy, and quadratic drag via one translational port. Replaces the earlier 3-block decomposition (AmbientPressure + BuoyancyForceSource + HydrodynamicDrag).
+- **Lungs and BCDBladder produce buoyancy force** — each has a translational port and applies `F_buoy = rho_water * g * V` directly. No separate coupling block needed.
+- **GasTank applies gas weight** — force = `n_tank * M_gas * g` through translational port.
+- **OPRV (Overpressure Relief Valve)** — passive dump valve in BCD circuit cracks at 3 psi gauge.
+- **Surface and Bottom hard stops** — spacer + hard-stop pairs limit travel to [0, max_depth].
+- **Stateflow depth controller** — simple state machine (drop → float → done) in harness; replaces the earlier two-tier MATLAB Function block approach.
 
 ## Numerical Gotchas
 
-- IP node needs a GasVolume (100mL) between regulators to avoid singular matrix
+- IP node needs a GasVolume (Hose Volume, 100mL) between regulators to avoid singular matrix
 - 2nd stage flow uses demand-proportional formulation: `(P_amb - P_lung - P_crack) / R_open`
-- PurgeValve needs P_dump (5000 Pa) bias to enable active venting
-- Surface hard-stop deferred (causes initialization singularity) — dive profiles start at 1m
+- BCDBladder clamps moles to non-negative to prevent unphysical reverse depletion
 - Solver: ode23t
-
-## Test Infrastructure
-
-Tests use `tests/ScubaTestHelper.m` which provides:
-- `loadModel()` — opens project, builds library if needed, loads model and params
-- `createInputDataset(simTime, rate, depth, inflate, purge)` — constant inputs
-- `createProfileDataset(...)` — time-varying inputs
-- `configureSimInput(simTime, ds, blockParams)` — builds `SimulationInput` with overrides
-- `runSim(simIn)` — runs from project root
-- `getSignal(logsout, name, blockPath)` — extracts logged Simscape variables
-- `enableLogging(blockPath, varNames)` — turns on Simscape variable logging
 
 ## File Organization
 
 - `+scuba/` — Simscape component source (`.ssc` files + SVG icons)
-- `models/` — Simulink models (`.slx`)
-- `parameters/` — Parameter definitions (`scuba_params.m` is the master)
-- `scripts/` — Run scripts, plotting, library build
-- `tests/` — Test classes (prefix `t`) + `ScubaTestHelper.m`
-- `scuba_lib.slx` — Compiled Simscape library (regenerated by `sscbuild('scuba')`)
-- `bcd_buoyancy_*_harness.slx` — Subsystem test harnesses (root level)
+  - `+gas/underwaterGas.ssc` — domain definition
+  - `+gas/branch.ssc` — unused base class (candidate for removal)
+  - `+gas/+elements/` — gas components (14 files, 2 unused: IdealMolarFlowSource, IdealPressureSource)
+  - `DiverBody.ssc` — combined mass/buoyancy/drag
+- `models/` — `Scuba_Diver.slx` (plant), `scuba_lib.slx` (compiled library)
+- `parameters/` — `scuba_params.m` (master), `gas_properties.m`, `diver_configs.m`
+- `scripts/` — `rebuildScubaLib.m`, `run_simulation.m`, `plot_results.m`, `load_plant_params.m`, etc.
+- `bcd_buoyancy_with_tank_harness.slx` — primary test harness (root level)
+- `scuba-buyancy.prj` — MATLAB project file

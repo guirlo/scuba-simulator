@@ -301,3 +301,49 @@ With breathing control active: mean depth error 0.49m, std 1.86m, tank consumpti
 ### Key Insight
 
 Breathing-based depth control is inherently limited by Boyle's law positive feedback: as the diver ascends, lung gas expands, increasing buoyancy, accelerating ascent. At 20m depth, this instability grows faster than the ~4s breath cycle can correct. The controller works as a fine-trim stabilizer within its authority band but cannot replace BCD for errors exceeding ~1.5m. The two-tier architecture correctly delegates based on each actuator's physical authority.
+
+---
+
+## 2026-05-28 through 2026-06-14 — Major Architecture Refactoring
+
+### Motivation
+
+The original architecture used a centralized coupling approach: a separate `AmbientPressure` sensor block computed P_amb from depth and distributed it via PS wires to every gas component. A centralized `BuoyancyForceSource` summed all volumes and applied Archimedes force. A separate `HydrodynamicDrag` block handled drag. This worked but was fragile to wire, and the `p_amb` domain variable added unnecessary complexity.
+
+### Key Changes
+
+1. **Removed P_amb from gas domain** — `underwaterGas.ssc` now has only `p` (across) and `n_dot` (through). No domain-level ambient pressure propagation.
+
+2. **Added translational port to gas components** — GasTank, FirstStageRegulator, SecondStageRegulator, Lungs, BCDBladder, and AmbientReference each gained a `foundation.translational.translational` node (`R`). Each computes `P_amb = P_atm + rho_water * R.gravity * R.x` locally.
+
+3. **Distributed buoyancy forces** — Lungs applies `F_buoy = rho_water * g * V_lungs` through its translational port. BCDBladder applies `F_buoy = rho_water * g * V_bcd`. GasTank applies gas weight `n_tank * M_gas * g`.
+
+4. **Created DiverBody** — Single component combining body mass, body buoyancy (fixed volume), and quadratic drag. Equation: `f == mass*der(R.v) - mass*R.gravity + F_buoy + F_drag`.
+
+5. **Removed old mechanical components** — `AmbientPressure.ssc`, `BuoyancyForceSource.ssc`, `HydrodynamicDrag.ssc` deleted.
+
+6. **Added OPRV** — `OverpressureReliefValve.ssc` for passive BCD overpressure relief (3 psi cracking pressure).
+
+7. **Added hard stops** — `Surface and Bottom` subsystem with spacer + hard-stop pairs provides physical depth limits.
+
+8. **Replaced `let/in/end` with `intermediates`** — All components updated to modern Simscape syntax.
+
+9. **Simplified controller** — Old two-tier MATLAB Function block + breathing bias removed. Replaced with simple Stateflow chart (drop → float → done) in harness.
+
+10. **Deleted old model and tests** — `scuba_buoyancy_sim.slx` and all 9 test classes removed. New primary model is `bcd_buoyancy_with_tank_harness.slx`.
+
+11. **Library output moved** — `sscbuild('scuba','-output','models')` places `scuba_lib.slx` in `models/` rather than project root.
+
+12. **Created Scuba_Diver.slx** — Reusable plant model (same topology as Plant subsystem in harness) with clean 3-input/2-output interface.
+
+### Design Rationale
+
+The translational-port approach is more modular: each component is self-contained and doesn't need external P_amb wiring. Adding or removing a component from the mechanical network automatically includes/excludes its force contribution. The gas domain stays pure (pressure + flow) while depth coupling happens through the shared translational domain.
+
+### What Was Lost
+
+- Wetsuit compression (was computed in BuoyancyForceSource) — not yet re-added
+- Full test suite (48 tests) — needs rewrite for new model topology
+- Two-tier breathing depth controller — replaced by simpler Stateflow
+- 36-minute dive profile scripting — `run_full_dive.m` references old model
+- `shutdown.m` — removed
