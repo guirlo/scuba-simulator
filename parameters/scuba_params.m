@@ -39,7 +39,7 @@ params.bcdInflateValve.R_open = 5e6;   % Pa*s/mol (~0.2 mol/s, symmetric with pu
 %% BCD Bladder
 params.bcd.maxVolume = 0.015;          % m^3 (15 L capacity)
 params.bcd.wallStiffness = 1e7;        % Pa/m^3
-params.bcd.initMoles = 0.298;           % mol (for neutral buoyancy at ic.depth)
+params.bcd.initMoles = 1e-6;           % mol (empty at beginning of simulation)
 params.bcd.inflateRate = 5e-4;         % m^3/s at ambient pressure
 params.bcd.deflateRate = 1e-3;         % m^3/s vent rate
 
@@ -59,7 +59,7 @@ params.wetsuit.gasFraction = 0.70;     % closed-cell porosity
 params.wetsuit.compressionExponent = 0.7; % empirical Boyle's exponent
 
 %% Weight Belt
-params.weightbelt.mass = 4;            % kg
+params.weightbelt.mass = 8;            % kg
 
 %% Gear
 params.gear.mass = 5;                  % kg (fins, mask, reg, etc.)
@@ -79,8 +79,34 @@ params.breathControl.dutyShiftMax = 0.10;   % fraction of cycle shifted per dire
 params.breathControl.amplitudeGain = 0.3;   % +/-30% asymmetry at full bias
 params.breathControl.bcdDeadband = 2.0;     % m - BCD only fires beyond this error
 
+% New 8-second timing parameters (for fullDiveHarness)
+params.breathControl.bc_t_inh_0 = 3.0;      % s
+params.breathControl.bc_duty_shift_inh = 0.2;
+params.breathControl.bc_A_base = 200.0;     % Pa
+params.breathControl.bc_amplitude_gain = 0.3;
+params.breathControl.bc_t_ihld_0 = 1.0;     % s
+params.breathControl.bc_hold_shift_max = 2.0; % s
+params.breathControl.bc_t_exh_0 = 3.0;      % s
+params.breathControl.bc_duty_shift_exh = 0.2;
+params.breathControl.bc_t_ehld_0 = 1.0;     % s
+
+% Supervisory control parameters (for fullDiveHarness)
+params.controller.ctrl_bottom_depth = 20.0; % m
+params.controller.ctrl_descent_rate = 10 / 60; % m/s (10 m/min)
+params.controller.ctrl_max_descent_rate = 0.5; % m/s
+params.controller.ctrl_K_brake = 10.0;      % s/m
+params.controller.ctrl_bottom_duration = 3000.0; % s (50 min)
+params.controller.ctrl_safety_depth = 5.0;  % m
+params.controller.ctrl_bcd_deadband = 2.0;  % m
+params.controller.ctrl_K_p = 2.0;           % 1/m
+params.controller.ctrl_ascent_rate = 5 / 60; % m/s (5 m/min)
+params.controller.ctrl_K_ascent = 0.5;
+params.controller.ctrl_max_ascent_rate = 10 / 60; % m/s (10 m/min)
+params.controller.ctrl_safety_duration = 300.0; % s (5 min)
+params.controller.ctrl_neutral_burst_duration = 3.5; % s
+
 %% Initial Conditions
-params.ic.depth = 20;                  % m (initial depth)
+params.ic.depth = 0;                  % m (initial depth)
 
 %% Physical Constants
 params.const.g = 9.81;                 % m/s^2

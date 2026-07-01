@@ -71,4 +71,30 @@ assignin('base', 'bc_duty_shift',    params.breathControl.dutyShiftMax);
 assignin('base', 'bc_amp_gain',      params.breathControl.amplitudeGain);
 assignin('base', 'bc_bcd_deadband',  params.breathControl.bcdDeadband);
 
+% New 8-second timing parameters (for fullDiveHarness)
+assignin('base', 'bc_t_inh_0',       params.breathControl.bc_t_inh_0);
+assignin('base', 'bc_duty_shift_inh',params.breathControl.bc_duty_shift_inh);
+assignin('base', 'bc_A_base',        params.breathControl.bc_A_base);
+assignin('base', 'bc_amplitude_gain',params.breathControl.bc_amplitude_gain);
+assignin('base', 'bc_t_ihld_0',      params.breathControl.bc_t_ihld_0);
+assignin('base', 'bc_hold_shift_max',params.breathControl.bc_hold_shift_max);
+assignin('base', 'bc_t_exh_0',       params.breathControl.bc_t_exh_0);
+assignin('base', 'bc_duty_shift_exh',params.breathControl.bc_duty_shift_exh);
+assignin('base', 'bc_t_ehld_0',      params.breathControl.bc_t_ehld_0);
+
+% Supervisory control parameters (for fullDiveHarness)
+assignin('base', 'ctrl_bottom_depth', params.controller.ctrl_bottom_depth);
+assignin('base', 'ctrl_descent_rate', params.controller.ctrl_descent_rate);
+assignin('base', 'ctrl_max_descent_rate', params.controller.ctrl_max_descent_rate);
+assignin('base', 'ctrl_K_brake',      params.controller.ctrl_K_brake);
+assignin('base', 'ctrl_bottom_duration', params.controller.ctrl_bottom_duration);
+assignin('base', 'ctrl_safety_depth',  params.controller.ctrl_safety_depth);
+assignin('base', 'ctrl_bcd_deadband',  params.controller.ctrl_bcd_deadband);
+assignin('base', 'ctrl_K_p',           params.controller.ctrl_K_p);
+assignin('base', 'ctrl_ascent_rate',   params.controller.ctrl_ascent_rate);
+assignin('base', 'ctrl_K_ascent',      params.controller.ctrl_K_ascent);
+assignin('base', 'ctrl_max_ascent_rate', params.controller.ctrl_max_ascent_rate);
+assignin('base', 'ctrl_safety_duration', params.controller.ctrl_safety_duration);
+assignin('base', 'ctrl_neutral_burst_duration', params.controller.ctrl_neutral_burst_duration);
+
 end
