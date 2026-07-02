@@ -1,5 +1,4 @@
-breathTestDepth = 1;
-breathTestDepthV = [5:5:30];
+breathTestDepthV = 5:5:30;
 N = length(breathTestDepthV);
 in = repmat(Simulink.SimulationInput('breath_test'),N,1);
 in = arrayfun(@(i) in(i).setVariable('breathTestDepth',breathTestDepthV(i)),1:N);
