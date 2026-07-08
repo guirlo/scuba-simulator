@@ -1,11 +1,11 @@
 # Scuba Simulator
 
-This repository contains a Simulink and Simscape project for modeling the
+This repository contains a Simulink&reg; and Simscape&trade; project for modeling the
 vertical dynamics and gas-system behavior of a scuba diver. An overview of the
 project is available in the accompanying Simulink blog post:
 <https://blogs.mathworks.com/simulink/2026/07/02/my-scuba-diving-simulator/>.
 The repository is organized around a reusable plant model, custom Simscape
-components, supporting simulation harnesses, MATLAB scripts, and project
+components, supporting simulation harnesses, MATLAB&reg; scripts, and project
 documentation.
 
 The central model is `models/Scuba_Diver.slx`, which represents a 1-DOF scuba
@@ -26,7 +26,7 @@ The `models/` directory contains the reusable plant and associated harness
 models:
 
 - `models/Scuba_Diver.slx`: reusable plant model
-- `models/descent_test.slx`: closed-loop harness with Stateflow-based depth
+- `models/descent_test.slx`: closed-loop harness with Stateflow&reg;-based depth
   control logic
 - `models/breath_test.slx`: harness for breathing and gas-consumption studies
 - `models/fullDiveHarness.slx`: harness for fuller dive-sequence experiments
