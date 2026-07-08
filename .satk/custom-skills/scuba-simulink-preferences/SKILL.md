@@ -64,8 +64,9 @@ When connecting translational mechanical parts, match the exact domain declared 
 
 ## 4. Class-Based Unit Tests
 
-*   Always write unit tests as MATLAB class-based tests inheriting from `matlab.unittest.TestCase`.
+*   Always write unit tests as MATLAB class-based tests inheriting from `matlab.unittest.TestCase` & `handle`.
 *   Simulate using `Simulink.SimulationInput` and `Simulink.SimulationOutput` via `sim()`.
+*   **Redundancy Rule:** You **never** need to call `load_system` before calling `sim()`. The `sim()` command automatically loads and opens the model behind the scenes, making manual `load_system` calls entirely redundant.
 *   Verify outcomes using `verifyEqual` or `verifyLessThan` with explicit `AbsTol` bounds on physical float values.
 
 ---
