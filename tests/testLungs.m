@@ -31,70 +31,41 @@ classdef testLungs < matlab.unittest.TestCase & handle
         end
     end
 
-    methods(Test)
-        function testNominalLungsState(testCase)
-            % Verify the initial physical state under nominal lung volume of 1.5L
+    methods
+        function runSimulation(testCase, volumeValue)
+            % Programmatically configure logging and run simulation to populate properties
+            load_system(testCase.ModelName);
+            
+            % Setup Simscape Selective Logging
+            tbl = simscape.instrumentation.defaultVariableTable(testCase.BlockPath);
+            tbl("V_lungs").Logging = true;
+            tbl("P_lung").Logging = true;
+            tbl("f").Logging = true;
+            tbl("n_lungs").Logging = true;
+            simscape.instrumentation.setVariableTable(testCase.BlockPath, tbl);
+
+            % Configure simulation input with specific commanded volume (1.5e-3 or 3.0e-3)
             in = Simulink.SimulationInput(testCase.ModelName);
             in = in.setModelParameter('StopTime', '10');
-            in = in.setBlockParameter([testCase.ModelName '/ConstantVol'], 'Value', '1.5e-3');
-
-            % Run simulation
+            in = in.setBlockParameter([testCase.ModelName '/ConstantVol'], 'Value', num2str(volumeValue));
             out = sim(in);
+
             ds = out.logsout;
-
-            testCase.V_nom_data = ds.get('V_lungs').Values;
-            testCase.f_nom_data = ds.get('f').Values;
-            testCase.p_nom_data = ds.get('P_lung').Values;
-            n_lungs_ts = ds.get('n_lungs').Values;
-
-            % 1. Initial moles must match n_init = 0.104 mol specified in Lungs.ssc
-            testCase.verifyEqual(n_lungs_ts.Data(1), 0.104, AbsTol=1e-3);
-            
-            % 2. Actual volume must match commanded nominal 1.5L
-            testCase.verifyEqual(testCase.V_nom_data.Data(1), 1.5e-3, AbsTol=1e-4);
-
-            % 3. Buoyancy force must develop according to volume: f = -rho_water * g * V_lungs
-            testCase.verifyEqual(testCase.f_nom_data.Data(1), -15.08, AbsTol=1e-1);
+            if volumeValue == 1.5e-3
+                testCase.V_nom_data = ds.get('V_lungs').Values;
+                testCase.f_nom_data = ds.get('f').Values;
+                testCase.p_nom_data = ds.get('P_lung').Values;
+            else
+                testCase.V_inh_data = ds.get('V_lungs').Values;
+                testCase.f_inh_data = ds.get('f').Values;
+                testCase.p_inh_data = ds.get('P_lung').Values;
+            end
         end
 
-        function testInhalationPressureAndBuoyancyDynamics(testCase)
-            % Verify expansion pressure drop and higher buoyancy lifting force during inhalation (3.0L)
-            
-            % Nominal baseline (1.5L) simulation for comparison
-            in_nominal = Simulink.SimulationInput(testCase.ModelName);
-            in_nominal = in_nominal.setModelParameter('StopTime', '10');
-            in_nominal = in_nominal.setBlockParameter([testCase.ModelName '/ConstantVol'], 'Value', '1.5e-3');
-            out_nominal = sim(in_nominal);
-            testCase.p_nom_data = out_nominal.logsout.get('P_lung').Values;
-
-            % Expanded inhalation (3.0L) simulation
-            in_inhale = Simulink.SimulationInput(testCase.ModelName);
-            in_inhale = in_inhale.setModelParameter('StopTime', '10');
-            in_inhale = in_inhale.setBlockParameter([testCase.ModelName '/ConstantVol'], 'Value', '3.0e-3');
-
-            out_inhale = sim(in_inhale);
-            ds_inhale = out_inhale.logsout;
-
-            testCase.V_inh_data = ds_inhale.get('V_lungs').Values;
-            testCase.p_inh_data = ds_inhale.get('P_lung').Values;
-            testCase.f_inh_data = ds_inhale.get('f').Values;
-
-            % 1. Verify volume matches commanded 3.0L
-            testCase.verifyEqual(testCase.V_inh_data.Data(1), 3.0e-3, AbsTol=1e-4);
-
-            % 2. Verify expansion pressure drop (pressure is lower than nominal volume baseline)
-            testCase.verifyLessThan(testCase.p_inh_data.Data(1), testCase.p_nom_data.Data(1));
-
-            % 3. Verify buoyancy lifting force increases proportionally with volume
-            testCase.verifyEqual(testCase.f_inh_data.Data(1), -30.16, AbsTol=1e-1);
-        end
-    end
-
-    methods
         function plotResults(testCase)
             % Plot the already-cached simulation results instantly
             if isempty(testCase.p_nom_data) || isempty(testCase.p_inh_data) || isempty(testCase.f_nom_data) || isempty(testCase.f_inh_data)
-                error('No simulation results found. Please run the tests first to populate results!');
+                error('No simulation results found. Please run both t.runSimulation(1.5e-3) and t.runSimulation(3.0e-3) first to populate results!');
             end
 
             % Create Figure & Plot
@@ -117,6 +88,42 @@ classdef testLungs < matlab.unittest.TestCase & handle
             ylabel('Buoyancy Force (N)');
             xlabel('Time (s)');
             legend('Nominal (1.5L)', 'Inhalation (3.0L)');
+        end
+    end
+
+    methods(Test)
+        function testNominalLungsState(testCase)
+            % Verify the initial physical state under nominal lung volume of 1.5L
+            testCase.runSimulation(1.5e-3);
+            
+            % Assertions
+            n_lungs_ts = testCase.run_simulation_and_get_moles(1.5e-3);
+            testCase.verifyEqual(n_lungs_ts.Data(1), 0.104, AbsTol=1e-3);
+            testCase.verifyEqual(testCase.V_nom_data.Data(1), 1.5e-3, AbsTol=1e-4);
+            testCase.verifyEqual(testCase.f_nom_data.Data(1), -15.08, AbsTol=1e-1);
+        end
+
+        function testInhalationPressureAndBuoyancyDynamics(testCase)
+            % Verify expansion pressure drop and higher buoyancy lifting force during inhalation (3.0L)
+            testCase.runSimulation(1.5e-3); % Establish nominal baseline
+            testCase.runSimulation(3.0e-3); % Simulate expanded inhalation
+
+            % Assertions
+            testCase.verifyEqual(testCase.V_inh_data.Data(1), 3.0e-3, AbsTol=1e-4);
+            testCase.verifyLessThan(testCase.p_inh_data.Data(1), testCase.p_nom_data.Data(1));
+            testCase.verifyEqual(testCase.f_inh_data.Data(1), -30.16, AbsTol=1e-1);
+        end
+    end
+
+    methods(Access = private)
+        function n_lungs_ts = run_simulation_and_get_moles(testCase, volumeValue)
+            % Tiny helper to extract private moles during test
+            load_system(testCase.ModelName);
+            in = Simulink.SimulationInput(testCase.ModelName);
+            in = in.setModelParameter('StopTime', '10');
+            in = in.setBlockParameter([testCase.ModelName '/ConstantVol'], 'Value', num2str(volumeValue));
+            out = sim(in);
+            n_lungs_ts = out.logsout.get('n_lungs').Values;
         end
     end
 end
