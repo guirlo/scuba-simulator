@@ -1,4 +1,4 @@
-classdef testLungs < matlab.unittest.TestCase
+classdef testLungs < matlab.unittest.TestCase & handle
     % testLungs Tests the Simscape Lungs block under volume command variations.
 
     properties

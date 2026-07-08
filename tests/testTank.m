@@ -1,4 +1,4 @@
-classdef testTank < matlab.unittest.TestCase
+classdef testTank < matlab.unittest.TestCase & handle
     % testTank Tests the Simscape GasTank block under constant discharge.
 
     properties
