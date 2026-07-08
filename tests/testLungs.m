@@ -21,7 +21,14 @@ classdef testLungs < matlab.unittest.TestCase & handle
             load_system(testCase.ModelName);
             testCase.addTeardown(@() close_system(testCase.ModelName, 0));
 
-            % Configure selective logging programmatically
+            % Setup Simscape Selective Logging cleanly using our public helper
+            testCase.configureLogging();
+        end
+    end
+
+    methods
+        function configureLogging(testCase)
+            % Programmatic Simscape Selective Logging configuration (single source of truth)
             tbl = simscape.instrumentation.defaultVariableTable(testCase.BlockPath);
             tbl("V_lungs").Logging = true;
             tbl("P_lung").Logging = true;
@@ -29,20 +36,13 @@ classdef testLungs < matlab.unittest.TestCase & handle
             tbl("n_lungs").Logging = true;
             simscape.instrumentation.setVariableTable(testCase.BlockPath, tbl);
         end
-    end
 
-    methods
         function runSimulation(testCase, volumeValue)
             % Programmatically configure logging and run simulation to populate properties
             load_system(testCase.ModelName);
             
-            % Setup Simscape Selective Logging
-            tbl = simscape.instrumentation.defaultVariableTable(testCase.BlockPath);
-            tbl("V_lungs").Logging = true;
-            tbl("P_lung").Logging = true;
-            tbl("f").Logging = true;
-            tbl("n_lungs").Logging = true;
-            simscape.instrumentation.setVariableTable(testCase.BlockPath, tbl);
+            % Setup Logging
+            testCase.configureLogging();
 
             % Configure simulation input with specific commanded volume (1.5e-3 or 3.0e-3)
             in = Simulink.SimulationInput(testCase.ModelName);

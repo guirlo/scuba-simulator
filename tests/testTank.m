@@ -17,28 +17,29 @@ classdef testTank < matlab.unittest.TestCase & handle
             load_system(testCase.ModelName);
             testCase.addTeardown(@() close_system(testCase.ModelName, 0));
 
-            % Configure selective logging programmatically using Simscape Instrumentation
+            % Setup Simscape Selective Logging cleanly using our public helper
+            testCase.configureLogging();
+        end
+    end
+
+    methods
+        function configureLogging(testCase)
+            % Programmatic Simscape Selective Logging configuration (single source of truth)
             tbl = simscape.instrumentation.defaultVariableTable(testCase.BlockPath);
             tbl("n_tank").Logging = true;    % Gas moles in tank
             tbl("f").Logging = true;         % Weight force (translational)
             tbl("A.p").Logging = true;       % Port A pressure
             simscape.instrumentation.setVariableTable(testCase.BlockPath, tbl);
         end
-    end
 
-    methods
         function runSimulation(testCase)
-            % Programmatically configure logging and run simulation to populate properties
+            % Run simulation and populate properties
             load_system(testCase.ModelName);
             
-            % Setup Simscape Selective Logging
-            tbl = simscape.instrumentation.defaultVariableTable(testCase.BlockPath);
-            tbl("n_tank").Logging = true;
-            tbl("f").Logging = true;
-            tbl("A.p").Logging = true;
-            simscape.instrumentation.setVariableTable(testCase.BlockPath, tbl);
+            % Setup Logging
+            testCase.configureLogging();
 
-            % Run simulation
+            % Run simulation (sim will auto-load)
             in = Simulink.SimulationInput(testCase.ModelName);
             in = in.setModelParameter('StopTime', '10');
             out = sim(in);
