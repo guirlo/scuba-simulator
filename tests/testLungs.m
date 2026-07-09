@@ -39,6 +39,12 @@ classdef testLungs < matlab.unittest.TestCase & handle
 
         function runSimulation(testCase, volumeValue)
             % Programmatically configure logging and run simulation to populate properties
+            % Supports optional volumeValue (defaults to 1.5e-3 nominal if omitted)
+            arguments
+                testCase
+                volumeValue (1,1) double = 1.5e-3
+            end
+            
             load_system(testCase.ModelName);
             
             % Setup Logging
@@ -94,7 +100,7 @@ classdef testLungs < matlab.unittest.TestCase & handle
     methods(Test)
         function testNominalLungsState(testCase)
             % Verify the initial physical state under nominal lung volume of 1.5L
-            testCase.runSimulation(1.5e-3);
+            testCase.runSimulation(); % Uses default 1.5e-3 (1.5L)
             
             % Assertions
             n_lungs_ts = testCase.run_simulation_and_get_moles(1.5e-3);
@@ -105,7 +111,7 @@ classdef testLungs < matlab.unittest.TestCase & handle
 
         function testInhalationPressureAndBuoyancyDynamics(testCase)
             % Verify expansion pressure drop and higher buoyancy lifting force during inhalation (3.0L)
-            testCase.runSimulation(1.5e-3); % Establish nominal baseline
+            testCase.runSimulation();       % Establish nominal baseline via default value
             testCase.runSimulation(3.0e-3); % Simulate expanded inhalation
 
             % Assertions
