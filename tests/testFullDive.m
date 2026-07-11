@@ -3,8 +3,7 @@
 % Controller parameters load automatically via the model InitFcn
 % (scripts/initDiveController.m).
 
-initDiveController
-
+initDiveController;
 mdl = 'fullDiveHarness';
 in = Simulink.SimulationInput(mdl);
 out = sim(in, 'ShowProgress', 'off');
@@ -15,9 +14,10 @@ Vbcd    = out.logsout.get('Vbcd').Values;
 inflate = out.logsout.get('inflate').Values;
 deflate = out.logsout.get('deflate').Values;
 Vlung   = out.logsout.get('V_lung').Values;
+TankPressure = out.logsout.get('Tank Pressure').Values;
 
 figure('Name', 'Full Dive Results')
-tiledlayout(4, 1, 'TileSpacing', 'compact')
+tiledlayout(5, 1, 'TileSpacing', 'compact')
 
 nexttile
 plot(ref.Time/60, ref.Data, '--', depth.Time/60, depth.Data)
@@ -41,6 +41,12 @@ grid on
 nexttile
 plot(Vlung.Time/60, Vlung.Data*1e3)
 ylabel('V_{lung} (L)')
+xlabel('Time (min)')
+grid on
+
+nexttile
+plot(TankPressure.Time/60, TankPressure.Data)
+ylabel('Tank Pressure (PSI)')
 xlabel('Time (min)')
 grid on
 
