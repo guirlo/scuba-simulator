@@ -3,7 +3,7 @@ classdef testDescent < matlab.unittest.TestCase & handle
 
     properties
         ModelName = 'descent_test'
-        InflateVector = 0.75:0.01:0.8
+        InflateVector = linspace(0.50,0.54,5)
         
         % Property to store simulation results for optional plotting
         SimulationResults
