@@ -59,9 +59,6 @@ Diver model:
 Components library:
 - `models/scuba_lib.slx`: generated Simscape library built from the `.ssc` source files
 
-The `data/` directory contains the project data dictionary:
-- `data/scubaParams.sldd`: Simulink data dictionary used by the models
-
 The `scripts/` directory contains MATLAB utilities for project support and
 library generation:
 - `scripts/rebuildScubaLib.m`: rebuilds the Simscape library into
