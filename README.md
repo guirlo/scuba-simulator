@@ -1,5 +1,9 @@
 # Scuba Simulator
 
+[![View on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/TO_BO_FIXED)
+
+[![Open in MATLAB Online](https://www.mathworks.com/images/responsive/global/open-in-matlab-online.svg)](https://matlab.mathworks.com/open/github/v1?repo=https://github.com/OWNER/REPO&project=scuba-buyancy.prj)
+
 This repository contains a Simulink&reg; and Simscape&trade; project for modeling the
 vertical dynamics and gas-system behavior of a scuba diver. An overview of the
 project is available in the accompanying Simulink blog post:
@@ -8,12 +12,21 @@ The repository is organized around a reusable plant model, custom Simscape
 components, supporting simulation harnesses, MATLAB&reg; scripts, and project
 documentation.
 
-The central model is `models/Scuba_Diver.slx`, which represents a 1-DOF scuba
+Use this simulator to:
+- Demonstrate custom Simscape domain patterns for pressure-driven gas systems without reducing the scuba equipment topology to signal-only approximations.
+- Exercise buoyancy-control algorithms against a physical plant that couples depth, breathing, gas consumption, buoyancy, drag, and equipment behavior. 
+- Teach dive physics
+
+The scuba diver model is `models/Scuba_Diver.slx`, which represents a 1-DOF scuba
 diver plant with Simulink interfaces for buoyancy-control commands and lung
 volume input, and outputs for depth and vertical velocity. The plant combines a
 custom gas domain with translational mechanics to represent the interaction
 between gas storage, regulation, breathing, BCD inflation and purge behavior,
 buoyancy, drag, and diver mass properties.
+
+![Scuba diver plant model](https://blogs.mathworks.com/simulink/files/ScubaSimulator.m-07-02-26_6-1.png)
+
+![Scuba diver plant model](https://blogs.mathworks.com/simulink/files/ScubaSimulator.m-07-02-26_7-1.png)
 
 The custom physical modeling implementation is defined under `+scuba/`. This
 includes the diver body component in `+scuba/DiverBody.ssc`, the custom gas
@@ -22,34 +35,49 @@ domain in `+scuba/+gas/underwaterGas.ssc`, and the gas-system elements in
 second-stage regulators, lungs, BCD bladder, inflate and purge valves,
 overpressure relief valve, ambient reference, and related assets.
 
+![Scuba diver plant model](https://blogs.mathworks.com/simulink/files/ScubaSimulator.m-07-02-26_5-1.png)
+
 The `models/` directory contains the reusable plant and associated harness
 models:
 
-- `models/Scuba_Diver.slx`: reusable plant model
-- `models/descent_test.slx`: closed-loop harness with Stateflow&reg;-based depth
-  control logic
+Component tests:
+- `models/harnesses/bcd_test.slx`: Buoyancy Control Device test harness
+- `models/harnesses/tank_test.slx`: Air tank test harness
+- `models/harnesses/lung_test.slx`: Diver lungs test harness
+System tests:
+- `models/descent_test.slx`: closed-loop harness with Stateflow&reg;-based depth control logic
+![Scuba diver plant model](https://blogs.mathworks.com/simulink/files/ScubaSimulator.m-07-02-26_9-1.png)
 - `models/breath_test.slx`: harness for breathing and gas-consumption studies
-- `models/fullDiveHarness.slx`: harness for fuller dive-sequence experiments
-- `models/scuba_lib.slx`: generated Simscape library built from the `.ssc`
-  source files
+![Scuba diver plant model](https://blogs.mathworks.com/simulink/files/ScubaSimulator.m-07-02-26_11-1.png)
+
+Full simulation:
+- `models/fullDiveHarness.slx`: harness for complete hour-long dive profile
+
+Diver model:
+- `models/Scuba_Diver.slx`: reusable subystem plant model
+
+Components library:
+- `models/scuba_lib.slx`: generated Simscape library built from the `.ssc` source files
 
 The `data/` directory contains the project data dictionary:
-
 - `data/scubaParams.sldd`: Simulink data dictionary used by the models
 
 The `scripts/` directory contains MATLAB utilities for project support and
 library generation:
-
 - `scripts/rebuildScubaLib.m`: rebuilds the Simscape library into
   `models/scuba_lib.slx`
 
-The `tests/` directory contains MATLAB simulation scripts used to run and plot
+The `tests/` directory contains MATLAB Test classes used to run and plot
 selected studies:
 
+- `tests/testDescent.m`: runs `fullDiveHarness` through a one hour dive profile
 - `tests/testDepth.m`: runs `breath_test` across multiple depths and plots tank
   pressure behavior
 - `tests/testDescent.m`: runs `descent_test` across multiple parameter values
   and plots depth response
+- `tests/testBCD.m`:
+- `tests/testTank.m`:
+- `tests/testLungs.m`:
 
 The `docs/` directory contains project documentation, including specifications
 and development notes. In particular,
@@ -65,6 +93,15 @@ model.
 - [`scripts/`](scripts/): MATLAB support scripts
 - [`tests/`](tests/): MATLAB simulation-study scripts
 - [`docs/`](docs/): specifications and project documentation
+- [`.satk/`](.satk/): Simulink Agentic Toolkit custom libraries requirements
+
+## Requirements
+
+- MATLAB R2026a
+- Simulink
+- Simscape
+- Stateflow
+
 
 ## Getting Started
 

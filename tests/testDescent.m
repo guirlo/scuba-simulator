@@ -54,10 +54,11 @@ classdef testDescent < matlab.unittest.TestCase & handle
             hold off;
             
             labels = ["Reference", compose("Inflate duration = %.2f sec", testCase.InflateVector)];
-            legend(labels, 'Location', 'best');
             grid on;
+            set(gca, 'YDir', 'reverse')
             xlabel('Time (sec)');
             ylabel('Depth (m)');
+            legend(labels, 'Location', 'best');
             title('Diver Descent Profiles');
         end
     end
