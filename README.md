@@ -94,10 +94,10 @@ model.
 
 ## Requirements
 
-- MATLAB R2026a
-- Simulink
-- Simscape
-- Stateflow
+- MATLAB&reg; R2026a
+- Simulink&reg;
+- Simscape&trade;
+- Stateflow&trade;
 
 
 ## Getting Started
